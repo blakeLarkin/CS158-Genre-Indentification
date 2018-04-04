@@ -99,3 +99,7 @@ ENV/
 
 # mypy
 .mypy_cache/
+
+/fma_metadata/
+/fma_metadata/*
+*.csv
