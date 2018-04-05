@@ -37,6 +37,9 @@ class DataSetGenerator(object):
         :param str goal: This is the desired value of the subclass to keep in the subset
         :param sequence features: a sequence object of starting list of features to create subset from
         """
+
+        # TODO: This line needs to somehow take into account that subset sizes are ordered 
+        #       i.e. any track labelled as part of the small subset, needs to be included in medium and big
         indices = tracks.index[tracks['set', subclass] == goal] # grab the track_ids of all songs in the desired subset.
         subTracks = tracks.loc[indices] # These are subsets of the original tracks
         subFeatures = features.loc[indices] # and features datasets
