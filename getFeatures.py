@@ -26,25 +26,65 @@ class DataSetGenerator(object):
             self.genre2 = genre2
             self.featureSets = featureSets
 
+    def getSubTracksAndFeatures(self, tracks, subclass, goal, features):
+        """
+        Given a starting list of tracks and features, creates subset of tracks and features that follow a 
+        dataset constraint as well as the genre and feature constraints of the generator
+
+        :param [tracks] tracks: pd object of starting list of tracks to create subset from
+        :param str subclass: This is the subcategorization of the track's set, either 'split' or 'subset'
+        :param str goal: This is the desired value of the subclass to keep in the subset
+        :param [features] features: pd object of starting list of features to create subset from
+        """
+        indices = tracks.index[tracks['set', subclass] == goal] # grab the track_ids of all songs in the desired subset.
+        subTracks = tracks.loc[indices] # These are subsets of the original tracks
+        subFeatures = features.loc[indices] # and features datasets
+
+        genre1 = tracks.index[tracks['track', 'genre_top'] == self.genre1] # collect tracks of genre1
+        genre2 = tracks.index[tracks['track', 'genre_top'] == self.genre2] #  collect tracks of genre2
+        
+        outTracks = subTracks.loc[indices & (genre1 | genre2)] # get small tracks of wanted genres
+
+        if self.featureSets is not None: # get desired features of small tracks of wanted genres
+            outFeatures = subFeatures.loc[indices & (genre1 | genre2), self.featureSets]
+        else: # use all features
+            outFeatures = subFeatures.loc[indices & (genre1 | genre2)]
+
+        return outTracks, outFeatures
+
+
     def create_X_y(self):
         """
         Create ndarrays from the subsets of features and tracks datasets that we want to look at.
         """
-        indices = self.tracks.index[self.tracks['set', 'subset'] <= self.subset] # grab the track_ids of all songs in the 'self.subset' subset.
-        tracks = self.tracks.loc[indices]     # These are subsets of the original tracks
-        features = self.features.loc[indices] # and features datasets
+        genreTracks, genreFeatures = self.getSubTracksAndFeatures(self.tracks, 'subset', self.subset, self.features) # get desired tracks and features
 
-        genre1 = self.tracks.index[self.tracks['track', 'genre_top'] == self.genre1] # collect tracks of genre1
-        genre2 = self.tracks.index[self.tracks['track', 'genre_top'] == self.genre2] # collect tracks of genre2
-        genreTracks = tracks.loc[indices & (genre1 | genre2)] # get small tracks of wanted genres
-        if self.featureSets is not None:
-            genreFeatures = features.loc[indices & (genre1 | genre2), self.featureSets] # get desired features of small tracks of wanted genres
-        else:
-            genreFeatures = features.loc[indices & (genre1 | genre2)] # use all features
         X = genreFeatures.as_matrix() # convert features to input matrix
         y = self.__output_classes_from_string_labels(genreTracks['track', 'genre_top']) # create 1v1 output categorization
 
         return X,y
+
+
+    def create_X_y_split(self):
+        """
+        Creates ndarrays from the subsets of features and tracks datasets we want to look at, separating into training, validation, and testing sets
+        """
+        indices = self.tracks.index[self.tracks['set', 'subset'] == self.subset] # grab the track_ids of all songs in the 'self.subset' subset.
+        tracks = self.tracks.loc[indices]     # These are subsets of the original tracks
+        features = self.features.loc[indices] # and features datasets
+
+        trainTracks, trainFeatures = self.getSubTracksAndFeatures(tracks, 'split', 'training', features) # get training items of small set
+        valTracks, valFeatures = self.getSubTracksAndFeatures(tracks, 'split', 'validation', features) # get validation items of small set
+        testTracks, testFeatures = self.getSubTracksAndFeatures(tracks, 'split', 'test', features) # get test items of small set
+
+        XTrain = trainFeatures.as_matrix() # convert features to input matrix
+        yTrain = self.__output_classes_from_string_labels(trainTracks['track', 'genre_top']) # create 1v1 output categorization
+        XVal = valFeatures.as_matrix() # convert features to input matrix
+        yVal = self.__output_classes_from_string_labels(valTracks['track', 'genre_top']) # create 1v1 output categorization
+        XTest = testFeatures.as_matrix() # convert features to input matrix
+        yTest = self.__output_classes_from_string_labels(testTracks['track', 'genre_top']) # create 1v1 output categorization
+
+        return XTrain, yTrain, XVal, yVal, XTest, yTest
 
 
     def __output_classes_from_string_labels(self, sequence):

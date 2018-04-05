@@ -105,3 +105,5 @@ ENV/
 *.csv
 
 .DS_Store
+
+test.py
