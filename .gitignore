@@ -103,3 +103,5 @@ ENV/
 /fma_metadata/
 /fma_metadata/*
 *.csv
+
+.DS_Store
