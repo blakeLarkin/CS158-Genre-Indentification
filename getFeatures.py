@@ -31,10 +31,10 @@ class DataSetGenerator(object):
         Given a starting list of tracks and features, creates subset of tracks and features that follow a 
         dataset constraint as well as the genre and feature constraints of the generator
 
-        :param [tracks] tracks: pd object of starting list of tracks to create subset from
+        :param DataFrame tracks: DataFrame of starting list of tracks to create subset from
         :param str subclass: This is the subcategorization of the track's set, either 'split' or 'subset'
         :param str goal: This is the desired value of the subclass to keep in the subset
-        :param [features] features: pd object of starting list of features to create subset from
+        :param DataFrame features: DataFrame object of starting list of features to create subset from
         """
         indices = tracks.index[tracks['set', subclass] == goal] # grab the track_ids of all songs in the desired subset.
         subTracks = tracks.loc[indices] # These are subsets of the original tracks
