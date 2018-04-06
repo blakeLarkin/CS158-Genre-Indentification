@@ -45,6 +45,10 @@ class DataSetGenerator(object):
         :param sequence libFeatures: a sequence object of starting list of librosa features to create subset from
         :param sequence echoFeatures: a sequence object of starting list of echonest features to create subset from
         """
+
+        # TODO: This line needs to somehow take into account that subset sizes are ordered 
+        #       i.e. any track labelled as part of the small subset, needs to be included in medium and big
+        # this was done with a <= before, but that is pretty handwavy and doesn't work for subclass = 'split'
         indices = tracks.index[tracks['set', subclass] == goal] # grab the track_ids of all songs in the desired subset.
         subTracks = tracks.loc[indices] # These are subsets of the original tracks
         subLibFeatures = libFeatures.loc[indices] # and librosa features
@@ -70,11 +74,16 @@ class DataSetGenerator(object):
         return outTracks, outFeatures
 
 
-    def create_X_y(self):
+    def create_X_y(self, genre1=None, genre2=None):
         """
         Create ndarrays from the subsets of features and tracks datasets that we want to look at.
         """
-        genreTracks, genreFeatures = self.__getSubTracksAndFeatures(self.tracks, 'subset', self.subset, self.libFeatures, self.echoFeatures) # get desired tracks and features
+        # update genres if necessary
+        if (genre1 is not None) and (genre2 is not None):
+            self.genre1 = genre1
+            self.genre2 = genre2
+
+        genreTracks, genreFeatures = self.__getSubTracksAndFeatures(self.tracks, 'subset', self.subset, self.features) # get desired tracks and features
 
         X = genreFeatures.as_matrix() # convert features to input matrix
         y = self.__output_classes_from_string_labels(genreTracks['track', 'genre_top']) # create 1v1 output categorization
@@ -82,10 +91,18 @@ class DataSetGenerator(object):
         return X,y
 
 
-    def create_X_y_split(self):
+    def create_X_y_split(self, genre1="Experimental", genre2="Pop"):
         """
         Creates ndarrays from the subsets of features and tracks datasets we want to look at, separating into training, validation, and testing sets
+    
+        :param str genre1: The first genre we'd like data for
+        :param str genre2: The second genre we'd like data for 
+        :return X_train, y_train, X_validation, y_validation, X_test, y_test
         """
+
+        self.genre1 = genre1
+        self.genre2 = genre2
+
         indices = self.tracks.index[self.tracks['set', 'subset'] == self.subset] # grab the track_ids of all songs in the 'self.subset' subset.
         tracks = self.tracks.loc[indices]     # These are subsets of the original tracks
         libFeatures = self.libFeatures.loc[indices] # and librosa features
