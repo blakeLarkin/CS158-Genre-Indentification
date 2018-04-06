@@ -57,10 +57,14 @@ class DataSetGenerator(object):
         return outTracks, outFeatures
 
 
-    def create_X_y(self):
+    def create_X_y(self, genre1="Experimental", genre2="Pop"):
         """
         Create ndarrays from the subsets of features and tracks datasets that we want to look at.
         """
+        #
+        self.genre1 = genre1
+        self.genre2 = genre2
+
         genreTracks, genreFeatures = self.__getSubTracksAndFeatures(self.tracks, 'subset', self.subset, self.features) # get desired tracks and features
 
         X = genreFeatures.as_matrix() # convert features to input matrix
@@ -69,10 +73,18 @@ class DataSetGenerator(object):
         return X,y
 
 
-    def create_X_y_split(self):
+    def create_X_y_split(self, genre1="Experimental", genre2="Pop"):
         """
         Creates ndarrays from the subsets of features and tracks datasets we want to look at, separating into training, validation, and testing sets
+    
+        :param str genre1: The first genre we'd like data for
+        :param str genre2: The second genre we'd like data for 
+        :return X_train, y_train, X_validation, y_validation, X_test, y_test
         """
+
+        self.genre1 = genre1
+        self.genre2 = genre2
+
         indices = self.tracks.index[self.tracks['set', 'subset'] == self.subset] # grab the track_ids of all songs in the 'self.subset' subset.
         tracks = self.tracks.loc[indices]     # These are subsets of the original tracks
         features = self.features.loc[indices] # and features datasets

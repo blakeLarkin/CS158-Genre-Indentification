@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 import utils
+import getFeatures as gf
 # Gabriel Womark & Flora Gallina Jones
 # Assignment 6
 
@@ -24,6 +25,7 @@ from sklearn.dummy import DummyClassifier
 from sklearn.svm import SVC
 from sklearn.model_selection import StratifiedKFold
 from sklearn import metrics
+from sklearn.tree import DecisionTree
 from sklearn.utils import shuffle
 from scipy.stats import norm
 
@@ -131,3 +133,27 @@ def cv_performance(clf, X, y, kf, metric="accuracy") :
         if not np.isnan(score) :
             scores.append(score)
     return np.array(scores).mean()
+
+
+def gen_depth_vs_accuracy(max_depth_min=2, max_depth_max=10, step=2, genre1="Experimental", genre2="Pop", feature_sets=None, subset="small", data_dir=""):
+    
+    data_gen = gf.DataSetGenerator(subset, data_dir, genre1, genre2, feature_sets)
+    X ,y ,_ ,_ ,_ ,_ =data_gen.create_X_y_split()
+
+    # Dtree parameters:
+    # 1. criterion = "entropy"
+    # 2. max_depth, varies
+    
+    depths = np.arange(max_depth_min,max_depth_max+1,step, dtype=np.int16)
+    n_trials = len(depths)
+
+    kf = StratifiedKFold(n=9, shuffle=True, random_state=10)
+    scores = np.zeros(n)
+
+
+    for i in range(n):
+        dtree = DecisionTree(critrion='entropy', max_depth=depths[i])
+        scores[i] = cv_performance(dtree, X, y, kf, metric='accuracy')
+
+    return scores
+
