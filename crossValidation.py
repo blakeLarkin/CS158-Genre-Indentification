@@ -135,8 +135,8 @@ def cv_performance(clf, X, y, kf, metric="accuracy") :
     return np.array(scores).mean()
 
 
-def gen_depth_vs_accuracy(max_depth_min=2, max_depth_max=10, step=2, genre1="Experimental", genre2="Pop", feature_sets=None, subset="small", data_dir=""):
-    
+def gen_depth_vs_accuracy(genre1="Experimental", genre2="Pop", max_depth_min=2, max_depth_max=2, step=2, feature_sets=None, subset="small", data_dir=""):
+     
     data_gen = gf.DataSetGenerator(subset, data_dir, genre1, genre2, feature_sets)
     X ,y ,_ ,_ ,_ ,_ =data_gen.create_X_y_split()
 
