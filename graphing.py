@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-def create_multi_line_graph(x, ys, title="", x_label="", y_label="", legend=None):
+def create_multi_line_graph(x_min, x_max, step, ys, title="", x_label="", y_label="", legend=None):
 	"""
 	Create a line graph with multiple curves, axis labels, and an appropriate legend.
 	:param [float] x
@@ -11,6 +11,7 @@ def create_multi_line_graph(x, ys, title="", x_label="", y_label="", legend=None
 	:param str y_label: y-axis label
 	:param [str] legend: legend labels, in same order of outputs 
 	"""
+	x = np.arange(x_min, x_max+1, step, dtype=np.float64)
 	for y in ys: 
 		plt.plot(x, y)
 
