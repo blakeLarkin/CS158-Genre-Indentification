@@ -23,9 +23,10 @@ import matplotlib.pyplot as plt
 # scikit-learn libraries
 from sklearn.dummy import DummyClassifier
 from sklearn.svm import SVC
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, cross_val_score
 from sklearn import metrics
-from sklearn.tree import DecisionTree
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.linear_model import Perceptron
 from sklearn.utils import shuffle
 from scipy.stats import norm
 
@@ -110,7 +111,7 @@ def cv_performance(clf, X, y, kf, metric="accuracy") :
 
     Parameters
     --------------------
-        clf    -- classifier (instance of SVC)
+        clf    -- classifier 
         X      -- numpy array of shape (n,d), feature vectors
                     n = number of examples
                     d = number of features
@@ -127,10 +128,9 @@ def cv_performance(clf, X, y, kf, metric="accuracy") :
     for train, test in kf.split(X, y) :
         X_train, X_test, y_train, y_test = X[train], X[test], y[train], y[test]
         clf.fit(X_train, y_train)
-        # use SVC.decision_function to make ``continuous-valued'' predictions
-        y_pred = clf.decision_function(X_test)
+        y_pred = clf.predict(X_test)
         score = performance(y_test, y_pred, metric)
-        if not np.isnan(score) :
+        if not np.isnan(score):
             scores.append(score)
     return np.array(scores).mean()
 
@@ -146,13 +146,14 @@ def gen_depth_vs_accuracy(genre1="Experimental", genre2="Pop", max_depth_min=2, 
     depths = np.arange(max_depth_min,max_depth_max+1,step, dtype=np.int16)
     n_trials = len(depths)
 
-    kf = StratifiedKFold(n=9, shuffle=True, random_state=10)
-    scores = np.zeros(n)
+   
+    scores = np.zeros(n_trials)
 
 
-    for i in range(n):
-        dtree = DecisionTree(critrion='entropy', max_depth=depths[i])
-        scores[i] = cv_performance(dtree, X, y, kf, metric='accuracy')
+    for i in range(n_trials):
+        dtree = DecisionTreeClassifier(criterion='entropy', max_depth=depths[i]) #Perceptron(max_iter=depths[i]*100) 
+        score = cross_val_score(dtree, X, y, cv=9, scoring=metrics.make_scorer(metrics.accuracy_score))
+        scores[i] = np.average(score)
 
-    return scores
+    return scores.tolist()
 
