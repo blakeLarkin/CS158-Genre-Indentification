@@ -38,7 +38,7 @@ def performance(y_true, y_pred, metric="accuracy") :
     Parameters
     --------------------
         y_true -- numpy array of shape (n,), known labels
-        y_pred -- numpy array of shape (n,), (continuous-valued) predictions
+        y_pred -- numpy array of shape (n,), (discrete-valued) predictions
         metric -- string, option used to select the performance measure
                   options: 'accuracy', 'f1_score', 'auroc', 'precision',
                            'sensitivity', 'specificity'
@@ -47,9 +47,6 @@ def performance(y_true, y_pred, metric="accuracy") :
     --------------------
         score  -- float, performance score
     """
-    # map continuous-valued predictions to binary labels
-    y_label = np.sign(y_pred)
-    y_label[y_label==0] = 1 # map points of hyperplane to +1
 
     tn, fp, fn, tp = metrics.confusion_matrix(y_true, y_label).ravel()
     total = tn + fp + fn + tp
@@ -135,9 +132,7 @@ def cv_performance(clf, X, y, kf, metric="accuracy") :
     return np.array(scores).mean()
 
 
-def gen_depth_vs_accuracy(genre1="Experimental", genre2="Pop", max_depth_min=2, max_depth_max=2, step=2, feature_sets=None, subset="small", data_dir=""):
-    data_gen = gf.DataSetGenerator(subset, data_dir, genre1, genre2, feature_sets)
-    X ,y ,_ ,_ ,_ ,_ =data_gen.create_X_y_split()
+def gen_depth_vs_accuracy(X,y, max_depth_min=2, max_depth_max=2, step=2):
 
     # Dtree parameters:
     # 1. criterion = "entropy"
@@ -149,10 +144,10 @@ def gen_depth_vs_accuracy(genre1="Experimental", genre2="Pop", max_depth_min=2, 
    
     scores = np.zeros(n_trials)
 
-
+    kf = StratifiedKFold(n_splits=9, shuffle=True, random_state=10)
     for i in range(n_trials):
         dtree = DecisionTreeClassifier(criterion='entropy', max_depth=depths[i]) #Perceptron(max_iter=depths[i]*100) 
-        score = cross_val_score(dtree, X, y, cv=9, scoring=metrics.make_scorer(metrics.accuracy_score))
+        score = cross_val_score(dtree, X, y, cv=kf, scoring=metrics.make_scorer(metrics.accuracy_score))
         scores[i] = np.average(score)
 
     return scores.tolist()

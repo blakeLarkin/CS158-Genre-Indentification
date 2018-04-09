@@ -4,7 +4,7 @@
 # You can set these variables from the command line.
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = cs158-genre-identification
+SPHINXPROJ    = GenreIndentification
 SOURCEDIR     = source
 BUILDDIR      = build
 
