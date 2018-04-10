@@ -48,10 +48,10 @@ def performance(y_true, y_pred, metric="accuracy") :
         score  -- float, performance score
     """
 
-    tn, fp, fn, tp = metrics.confusion_matrix(y_true, y_label).ravel()
+    tn, fp, fn, tp = metrics.confusion_matrix(y_true, y_pred).ravel()
     total = tn + fp + fn + tp
 
-    accuracy = metrics.accuracy_score(y_true, y_label)
+    accuracy = metrics.accuracy_score(y_true, y_pred)
     sensitivity = float(tp) / (tp + fn)
     specificity = float(tn) / (tn + fp)
     precision = float(tp) / (tp + fp)
@@ -131,6 +131,60 @@ def cv_performance(clf, X, y, kf, metric="accuracy") :
             scores.append(score)
     return np.array(scores).mean()
 
+def performance_CI(clf, X, y, metric="accuracy") :
+    """
+    Estimates the performance of the classifier using the 95% CI.
+
+    Parameters
+    --------------------
+        clf          -- classifier (instance of SVC or DummyClassifier)
+                          [already fit to data]
+        X            -- numpy array of shape (n,d), feature vectors of test set
+                          n = number of examples
+                          d = number of features
+        y            -- numpy array of shape (n,), binary labels {1,-1} of test set
+        metric       -- string, option used to select performance measure
+
+    Returns
+    --------------------
+        score        -- float, classifier performance
+        lower        -- float, lower limit of confidence interval
+        upper        -- float, upper limit of confidence interval
+    """
+    try :
+        y_pred = clf.decision_function(X)
+    except :
+        y_pred = clf.predict(X)
+    score = performance(y, y_pred, metric)
+
+    ### ========== TODO : START ========== ###
+    # part 4b: use bootstrapping to compute 95% confidence interval
+    # hint: use np.random.randint(...)
+    n, d = X.shape
+
+    scores = np.zeros(1000)
+
+    for t in range(1000):
+        sample_X = np.zeros((n, d))
+        sample_y = np.zeros(n)
+
+        # Sample with replacement
+        for i in range(n):
+            index = np.random.randint(n)
+            sample_X[i] = X[index]
+            sample_y[i] = y[index]
+
+        try:
+            sample_y_pred = clf.decision_function(sample_X)
+        except:
+            sample_y_pred = clf.predict(sample_X)
+
+        scores[t] = performance(sample_y, sample_y_pred, metric)
+
+    lower, upper = (np.percentile(scores, 2.5), np.percentile(scores, 97.5))
+
+    return score, lower, upper
+    ### ========== TODO : END ========== ###
 
 def gen_depth_vs_accuracy(X,y, max_depth_min=2, max_depth_max=2, step=2):
 

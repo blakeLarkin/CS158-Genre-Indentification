@@ -1,6 +1,8 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from crossValidation import gen_depth_vs_accuracy
+from crossValidation import performance_CI
+from sklearn.dummy import DummyClassifier
 from getFeatures import DataSetGenerator 
 from fixtures import TOP_GENRES
 
@@ -32,15 +34,111 @@ def create_multi_line_graph(x_min, x_max, step, ys, title="", x_label="", y_labe
     plt.ylabel(y_label)
     plt.show()
 
+def plot_CI_performance(metrics, classifiers, *args):
+    """
+    Make a results plot.
+
+    Parameters
+    --------------------
+        metrics      -- list of strings, metrics
+        classifiers  -- list of strings, classifiers
+        args         -- variable length argument
+                          results for baseline
+                          results for classifier 1
+                          results for classifier 2
+                          ...
+                        each results is a tuple (score, lower, upper)
+    """
+
+    num_metrics = len(metrics)
+    num_classifiers = len(args) - 1
+
+    ind = np.arange(num_metrics)  # the x locations for the groups
+    width = 0.7 / num_classifiers # the width of the bars
+
+    fig, ax = plt.subplots()
+
+    # loop through classifiers
+    rects_list = []
+    for i in range(num_classifiers):
+        results = args[i+1] # skip baseline
+        means = [it[0] for it in results]
+        errs = [(it[0] - it[1], it[2] - it[0]) for it in results]
+        rects = ax.bar(ind + i * width, means, width, label=classifiers[i])
+        ax.errorbar(ind + i * width, means, yerr=np.array(errs).T, fmt="None", ecolor='k')
+        rects_list.append(rects)
+
+    # baseline
+    results = args[0]
+    for i in range(num_metrics) :
+        mean = results[i][0]
+        err_low = results[i][1]
+        err_high = results[i][2]
+        xlim = (ind[i] - 0.8 * width, ind[i] + num_classifiers * width - 0.2 * width)
+        plt.plot(xlim, [mean, mean], color='k', linestyle='-', linewidth=2)
+        plt.plot(xlim, [err_low, err_low], color='k', linestyle='--', linewidth=2)
+        plt.plot(xlim, [err_high, err_high], color='k', linestyle='--', linewidth=2)
+
+    ax.set_ylabel('Score')
+    ax.set_ylim(0, 1)
+    ax.set_xticks(ind + width / num_classifiers)
+    ax.set_xticklabels(metrics)
+    ax.legend()
+
+    def autolabel(rects):
+        """Attach a text label above each bar displaying its height"""
+        for rect in rects:
+            height = rect.get_height()
+            ax.text(rect.get_x() + rect.get_width()/2., 1.05*height,
+                    '%.3f' % height, ha='center', va='bottom')
+
+    for rects in rects_list:
+        autolabel(rects)
+
+    plt.show()
+
+
+def generate_confidence_interval_graph(dsg,classifiers_str, classifiers):
+    X_train, y_train, X_test, y_test = dsg.create_X_y_split()
+
+    results = {}
+    metric_list = ["accuracy", "f1_score", "auroc", "precision", "sensitivity", "specificity"]
+
+    # Train classifiers
+    dummy = DummyClassifier()
+    dummy.fit(X_train, y_train)
+
+    for classifier in classifiers:
+        classifier.fit(X_train, y_train)
+
+
+    # Predict and calculate confidence intervals
+    dummy_results = []
+
+    for metric in metric_list:
+        # Calculate dummy performance
+        dummy_results.append(performance_CI(dummy, X_test, y_test, metric=metric))
+
+        # Calculate performance of other classifiers
+        for index, classifier in enumerate(classifiers_str):
+            result = performance_CI(classifiers[index], X_test, y_test, metric=metric)
+            if classifiers_str[index] not in results:
+                results[classifiers_str[index]] = []
+            results[classifiers_str[index]].append(result)
+
+    # plot other results
+    plot_CI_performance(metric_list, classifiers_str, dummy_results, *[results[classifier] for classifier in classifiers_str])
+
+
 def gen_depth_vs_acc_plot(genre_prs, min_depth=2, max_depth=5, step=1, feature_sets=None, data_dir=""):
 
     scores = []
     legend = []
 
-    dsg = DataSetGenerator('small', libFeatureSets=feature_sets, data_dir=data_dir)
+    #dsg = DataSetGenerator('small', libFeatureSets=feature_sets, data_dir=data_dir)
 
     for pair in genre_prs:
-        X, y, _, _, _, _ = dsg.create_X_y_split(pair[0], pair[1])
+        X, y, _, _ = dsg.create_X_y_split(pair[0], pair[1])
         scores.append(gen_depth_vs_accuracy(X, y, max_depth_min=min_depth, max_depth_max=max_depth, step=step))
         legend.append(pair[0] + " and " +  pair[1] )
 
@@ -52,12 +150,12 @@ def gen_depth_vs_acc_plot(genre_prs, min_depth=2, max_depth=5, step=1, feature_s
     title="Binary Genre Classification: Decision Trees"
     create_multi_line_graph(min_depth, max_depth, step, scores, title=title, x_label=x_label, y_label = y_label, legend=legend)
 
-def genrePCA(genres = TOP_GENRES):
+def genrePCA(dsg, genres = TOP_GENRES):
   '''
   pass in a string list of genre names to see all combinations, default is all genres
   '''
   # create DataSetGenerator
-  dsg = DataSetGenerator('small', echoFeatureSets=[])
+  #dsg = DataSetGenerator('small', echoFeatureSets=[])
   # go through each genre combination
   for i in range(len(genres)):
     for j in range(i + 1, len(genres)):

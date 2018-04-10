@@ -126,16 +126,27 @@ class DataSetGenerator(object):
         libFeatures = self.libFeatures.loc[indices] # and librosa features
         echoFeatures = self.echoFeatures.loc[indices] # and echonest features datasets
 
-        splitXy = []
+        splitXy = {}
 
         for split in ['training', 'validation', 'test']:
-            subTracks, subFeatures = self.__getSubTracksAndFeatures(tracks, 'split', split, libFeatures, echoFeatures) # get training items of small set
-            if split == 'training':
-                print(subTracks['track','genre_top'].unique())
-            splitXy.append(subFeatures.as_matrix()) # append next X
-            splitXy.append(self.__output_classes_from_string_labels(subTracks['track', 'genre_top'])) # append next y
+            splitXy[split] = tuple(self.__getSubTracksAndFeatures(tracks, 'split', split, libFeatures, echoFeatures)) # get training items of small set
+            
+            # splitXy.append(subFeatures.as_matrix()) # append next X
+            # splitXy.append(self.__output_classes_from_string_labels(subTracks['track', 'genre_top'])) # append next y
 
-        return splitXy
+        sub_features = pd.concat([splitXy['training'][1], splitXy['validation'][1]])
+        sub_tracks = pd.concat([splitXy['training'][0], splitXy['validation'][0]])
+
+        test_sub_features = splitXy['test'][1]
+        test_sub_tracks = splitXy['test'][0]
+
+        X_train = sub_features.as_matrix()
+        y_train = self.__output_classes_from_string_labels(sub_tracks['track', 'genre_top'])
+
+        X_test = test_sub_features.as_matrix()
+        y_test = self.__output_classes_from_string_labels(test_sub_tracks['track', 'genre_top'])
+
+        return X_train, y_train, X_test, y_test
 
     def create_Viz_Data(self, genre1 = None, genre2 = None):
         if (genre1 is not None) and (genre2 is not None):
