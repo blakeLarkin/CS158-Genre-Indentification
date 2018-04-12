@@ -186,23 +186,56 @@ def performance_CI(clf, X, y, metric="accuracy") :
     return score, lower, upper
     ### ========== TODO : END ========== ###
 
-def gen_depth_vs_accuracy(X,y, max_depth_min=2, max_depth_max=2, step=2):
+
+def gen_depth_vs_accuracy(data, max_depth_min=2, max_depth_max=2, step=2):
 
     # Dtree parameters:
     # 1. criterion = "entropy"
     # 2. max_depth, varies
     
     depths = np.arange(max_depth_min,max_depth_max+1,step, dtype=np.int16)
-    n_trials = len(depths)
+    metric = metrics.accuracy_score
 
+    varied_hyp = {'name': 'max_depth', 'hyparams': depths}
+    other_params = {'criterion': 'entropy'}
+    clf_class = DecisionTreeClassifier
+
+
+    return metric_vs_hyperparameters(data, metric, clf_class, varied_hyp, other_params)
+
+def metric_vs_hyperparameters(data, metric, clf_class, varied_hyp, other_params={}):
+    """
+    Calculate test and training accuracies using 9-fold cv while varying a single hyperparameter
+
+    :param [nd.array] data: List of the form [X_train, y_train, X_test, y_test]
+    :param metric: A numpy.metrics metric
+    :param Class clf_class: The class of the classifier to test
+    :param dict varied_hyp: Dictionary with keys 'name' and 'hyparams'. 'name' stores the name of the hyperparamter to vary as a string, 
+                            'hyparams' stores the list of varying hyperparamter values
+    :param dict other_params: A dictionary storing arguments to be passed to the classifier class upon construction
+    """
+
+    # grab data and format to calculate scores using for loop
+    X_train, y_train, X_test, y_test = data
+    data={'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test':y_test}
+
+    n_trials = len(varied_hyp['hyparams'])
    
-    scores = np.zeros(n_trials)
+    # Store scores in this dictionary
+    scores = {'train':[], 'test':[]}
 
+    # Set up cv
     kf = StratifiedKFold(n_splits=9, shuffle=True, random_state=10)
-    for i in range(n_trials):
-        dtree = DecisionTreeClassifier(criterion='entropy', max_depth=depths[i]) #Perceptron(max_iter=depths[i]*100) 
-        score = cross_val_score(dtree, X, y, cv=kf, scoring=metrics.make_scorer(metrics.accuracy_score))
-        scores[i] = np.average(score)
 
-    return scores.tolist()
+    #Calculate scores here
+    for param in varied_hyp['hyparams']:
+        # Set up classifier with varied parameter and other paramters
+        clf_args = {varied_hyp['name']: param, **other_params}
+        clf = clf_class(**clf_args)
+
+        for subset in ['train', 'test']:
+            score = cross_val_score(clf, data['X_'+subset], data['y_'+subset], cv=kf, scoring=metrics.make_scorer(metric))
+            scores[subset].append(np.average(score))
+
+    return scores['train'], scores['test']
 

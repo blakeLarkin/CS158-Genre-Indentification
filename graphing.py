@@ -1,10 +1,19 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from crossValidation import gen_depth_vs_accuracy
+from crossValidation import gen_depth_vs_accuracy, gen_depth_vs_accuracy_2
 from crossValidation import performance_CI
 from sklearn.dummy import DummyClassifier
 from getFeatures import DataSetGenerator 
 from fixtures import TOP_GENRES
+
+def add_dsg(dsg):
+    def decorator(function):
+        def wrapper(*args, **kwargs):
+            function(*args, **kwargs)
+
+        return wrapper
+    return decorator
+
 
 def create_multi_line_graph(x_min, x_max, step, ys, title="", x_label="", y_label="", legend=None, **kwargs):
     """
@@ -23,13 +32,9 @@ def create_multi_line_graph(x_min, x_max, step, ys, title="", x_label="", y_labe
     if legend is not None :
         plt.legend(legend, loc=0)
 
+    if 'ylim' in kwargs:
+        plt.ylim(kwargs['ylim'])
     plt.title(title)
-    for index, item in enumerate(kwargs.items()):
-        x = 2
-        y = 2+(index*0.1)
-        k = item[0]
-        v = item[1]
-        plt.figtext(x, y, "{}= {}".format(k, v))
     plt.xlabel(x_label)
     plt.ylabel(y_label)
     plt.show()
@@ -130,25 +135,34 @@ def generate_confidence_interval_graph(dsg,classifiers_str, classifiers):
     plot_CI_performance(metric_list, classifiers_str, dummy_results, *[results[classifier] for classifier in classifiers_str])
 
 
-def gen_depth_vs_acc_plot(genre_prs, min_depth=2, max_depth=5, step=1, feature_sets=None, data_dir=""):
+def gen_depth_vs_acc_plot(dsg, genre_prs, min_depth=2, max_depth=5, step=1):
 
-    scores = []
-    legend = []
+    train_scores = []
+    test_scores = []
+
+    train_legend = []
+    test_legend = []
 
     #dsg = DataSetGenerator('small', libFeatureSets=feature_sets, data_dir=data_dir)
 
     for pair in genre_prs:
-        X, y, _, _ = dsg.create_X_y_split(pair[0], pair[1])
-        scores.append(gen_depth_vs_accuracy(X, y, max_depth_min=min_depth, max_depth_max=max_depth, step=step))
-        legend.append(pair[0] + " and " +  pair[1] )
+        X_train, y_train, X_test, y_test = dsg.create_X_y_split(pair[0], pair[1])
+        train_score, test_score = gen_depth_vs_accuracy(list(dsg.create_X_y_split(pair[0], pair[1])), max_depth_min=min_depth, max_depth_max=max_depth, step=step)
+        train_scores.append(train_score)
+        test_scores.append(test_score)
 
-    print(scores)
-    print(scores[0][0])
+        pair_string = pair[0] + " and " +  pair[1]
+        train_legend.append(pair_string + ": Training" )
+        test_legend.append(pair_string + ": Test")
+
 
     x_label="Maximum Decision Tree Depths"
     y_label = "Accuracy"
     title="Binary Genre Classification: Decision Trees"
-    create_multi_line_graph(min_depth, max_depth, step, scores, title=title, x_label=x_label, y_label = y_label, legend=legend)
+    create_multi_line_graph(min_depth, max_depth, step, train_scores+test_scores, title=title, x_label=x_label, y_label = y_label, legend=train_legend+test_legend, ylim=(0,1))
+
+def metric_vs_hyperparameter_plot(title, x_label, y_label):
+    pass
 
 def genrePCA(dsg, genres = TOP_GENRES):
   '''
