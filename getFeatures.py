@@ -1,6 +1,7 @@
+import collections
 import numpy as np
 import pandas as pd
-from fixtures import DEF_LIB_SETS, DEF_ECHO_SETS
+from fixtures import DEF_LIB_SETS, DEF_ECHO_SETS, DEF_CACHE_CAP
 import sklearn as skl
 import sklearn.decomposition, sklearn.preprocessing
 import utils
@@ -32,6 +33,7 @@ class DataSetGenerator(object):
             self.libFeatureSets = libFeatureSets
             # currently there are issues with echo features, please avoid use
             self.echoFeatureSets = echoFeatureSets
+            self.cache = LRUCache(DEF_CACHE_CAP)
 
     def __getSubTracksAndFeatures(self, tracks, subclass, goal, libFeatures, echoFeatures):
         """
@@ -56,25 +58,35 @@ class DataSetGenerator(object):
 
         genre1 = tracks.index[tracks['track', 'genre_top'] == self.genre1] # collect tracks of genre1
         genre2 = tracks.index[tracks['track', 'genre_top'] == self.genre2] #  collect tracks of genre2
-        
-        outTracks = subTracks.loc[indices & (genre1 | genre2)] # get small tracks of wanted genres
 
-        if self.libFeatureSets is not None: # get desired librosa features of small tracks of wanted genres
-            libFeatures = subLibFeatures.loc[indices & (genre1 | genre2), self.libFeatureSets]
-        else: # use all features
-            libFeatures = subLibFeatures.loc[indices & (genre1 | genre2)]
+        # Check for features and tracks in cache
+        query_key = cache_hash([subclass, goal, self.genre1, self.genre2])
+        query_result = self.cache.get(query_key)
 
-        # currently there are issues with echoFeatures, please avoid use
-        echoFeatures = subEchoFeatures.loc[indices & (genre1 | genre2), ['echonest']]
-        if self.echoFeatureSets is not None: # get desired echonest features of small tracks of wanted genres
-            echoFeatures = echoFeatures.loc[indices & (genre1 | genre2), self.echoFeatureSets]
+        if query_result != -1:
+            # Successful cache query
+            return query_result
+        else:
+            outTracks = subTracks.loc[indices & (genre1 | genre2)] # get small tracks of wanted genres
 
-        outFeatures = pd.concat([libFeatures, echoFeatures]) if len(self.echoFeatureSets) != 0 else libFeatures
+            if self.libFeatureSets is not None: # get desired librosa features of small tracks of wanted genres
+                libFeatures = subLibFeatures.loc[indices & (genre1 | genre2), self.libFeatureSets]
+            else: # use all features
+                libFeatures = subLibFeatures.loc[indices & (genre1 | genre2)]
 
-        return outTracks, outFeatures
+            # currently there are issues with echoFeatures, please avoid use
+            echoFeatures = subEchoFeatures.loc[indices & (genre1 | genre2), ['echonest']]
+            if self.echoFeatureSets is not None: # get desired echonest features of small tracks of wanted genres
+                echoFeatures = echoFeatures.loc[indices & (genre1 | genre2), self.echoFeatureSets]
+
+            outFeatures = pd.concat([libFeatures, echoFeatures]) if len(self.echoFeatureSets) != 0 else libFeatures
+
+            # Add new outTracks and Features to cache
+            self.cache.set(query_key, [outTracks, outFeatures])
+            return outTracks, outFeatures
 
 
-    def create_X_y(self, genre1=None, genre2=None):
+    def create_X_y(self, genre1="Experimental", genre2="Pop"):
         """
         Create ndarrays from the subsets of features and tracks datasets that we want to look at.
         """
@@ -83,11 +95,17 @@ class DataSetGenerator(object):
             self.genre1 = genre1
             self.genre2 = genre2
 
-        genreTracks, genreFeatures = self.__getSubTracksAndFeatures(self.tracks, 'subset', self.subset, self.features) # get desired tracks and features
+        indices = self.tracks.index[self.tracks['set', 'subset'] == self.subset] # grab the track_ids of all songs in the 'self.subset' subset.
+        tracks = self.tracks.loc[indices]     # These are subsets of the original tracks
+        libFeatures = self.libFeatures.loc[indices] # and librosa features
+        echoFeatures = self.echoFeatures.loc[indices] # and echonest features datasets    
+
+        genreTracks, genreFeatures = self.__getSubTracksAndFeatures(tracks, 'subset', self.subset, libFeatures, echoFeatures) # get desired tracks and features
+        print(genreTracks.shape)
+        print(genreTracks['track','genre_top'].unique())
 
         X = genreFeatures.as_matrix() # convert features to input matrix
         y = self.__output_classes_from_string_labels(genreTracks['track', 'genre_top']) # create 1v1 output categorization
-
         return X,y
 
 
@@ -108,14 +126,27 @@ class DataSetGenerator(object):
         libFeatures = self.libFeatures.loc[indices] # and librosa features
         echoFeatures = self.echoFeatures.loc[indices] # and echonest features datasets
 
-        splitXy = []
+        splitXy = {}
 
         for split in ['training', 'validation', 'test']:
-            subTracks, subFeatures = self.__getSubTracksAndFeatures(tracks, 'split', split, libFeatures, echoFeatures) # get training items of small set
-            splitXy.append(subFeatures.as_matrix()) # append next X
-            splitXy.append(self.__output_classes_from_string_labels(subTracks['track', 'genre_top'])) # append next y
+            splitXy[split] = tuple(self.__getSubTracksAndFeatures(tracks, 'split', split, libFeatures, echoFeatures)) # get training items of small set
+            
+            # splitXy.append(subFeatures.as_matrix()) # append next X
+            # splitXy.append(self.__output_classes_from_string_labels(subTracks['track', 'genre_top'])) # append next y
 
-        return splitXy
+        sub_features = pd.concat([splitXy['training'][1], splitXy['validation'][1]])
+        sub_tracks = pd.concat([splitXy['training'][0], splitXy['validation'][0]])
+
+        test_sub_features = splitXy['test'][1]
+        test_sub_tracks = splitXy['test'][0]
+
+        X_train = sub_features.as_matrix()
+        y_train = self.__output_classes_from_string_labels(sub_tracks['track', 'genre_top'])
+
+        X_test = test_sub_features.as_matrix()
+        y_test = self.__output_classes_from_string_labels(test_sub_tracks['track', 'genre_top'])
+
+        return X_train, y_train, X_test, y_test
 
     def create_Viz_Data(self, genre1 = None, genre2 = None):
         if (genre1 is not None) and (genre2 is not None):
@@ -150,4 +181,38 @@ class DataSetGenerator(object):
             classes[i] = self.labels_to_classes[label]
         return classes
 
+
+####################################
+###                              ###
+### Helper Classes and Functions ###
+###                              ###
+####################################
+
+
+class LRUCache(object):
+    """
+    Simple LRU Cache implementation taken from https://www.kunxi.org/blog/2014/05/lru-cache-in-python/
+    """
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.cache = collections.OrderedDict()
+
+    def get(self, key):
+        try:
+            value = self.cache.pop(key)
+            self.cache[key] = value
+            return value
+        except KeyError:
+            return -1
+
+    def set(self, key, value):
+        try:
+            self.cache.pop(key)
+        except KeyError:
+            if len(self.cache) >= self.capacity:
+                self.cache.popitem(last=False)
+        self.cache[key] = value
+
+def cache_hash(list_of_words):
+    return "-".join(list_of_words)
 
