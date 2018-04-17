@@ -181,6 +181,32 @@ class DataSetGenerator(object):
             classes[i] = self.labels_to_classes[label]
         return classes
 
+    def create_info_gain_subset(self, X_train, y_train, X_test, y_test, num_feat) :
+        """
+        Take in a training and test set and returns versions of those sets
+        that only include the num_feat most information-gaining features.
+        :param X_train: The full matrix of training examples
+        :param y_train: The labels for those training examples
+        :param X_test: The full matrix of text examples
+        :param y_test: The labels for the test examples
+        :param num_feat: The number of features in the outputted training and test sets 
+        :return Training and test sets and their labels, now with num_feat features
+        """
+        _, d = X_train.shape
+
+        if not num_feat <= d:
+            print("A subset of features was not created due to input num_feat param.\n Full feature set used.")
+            return X_train, y_train, X_test, y_test
+
+        info_gains = skl.feature_selection.mutual_info_classif(X_train, y_train)
+
+        ranking = np.argsort(info_gains)[-num_feat::]
+
+        X_sub_train = np.take(X_train, ranking, axis=1)
+        X_sub_test = np.take(X_test, ranking, axis=1)
+
+        return X_sub_train, y_train, X_sub_test, y_test
+
 
 ####################################
 ###                              ###
@@ -215,43 +241,6 @@ class LRUCache(object):
 
 def cache_hash(list_of_words):
     return "-".join(list_of_words)
-
-
-def create_info_gain_subset(X_train, y_train, X_test, y_test, num_feat) :
-    """
-    A function that takes in a training and test set and returns
-    versions of those sets that only include the num_feat most
-    information-gaining features.
-    :param X_train: The full matrix of training examples
-    :param y_train: The labels for those training examples
-    :param X_test: The full matrix of text examples
-    :param y_test: The labels for the test examples
-    :param num_feat: The number of features in the outputted training and test sets 
-    :return Training and test sets and their labels, now with num_feat features
-    """
-    _, d = X_train.shape
-
-    if not num_feat <= d:
-        print("A subset of features was not created due to input num_feat param.\n Full feature set used.")
-        return X_train, y_train, X_test, y_test
-
-    info_gains = skl.feature_selection.mutual_info_classif(X_train, y_train)
-
-    ranking = np.argsort(info_gains)[-num_feat::]
-
-    # print("Subset of features: ", info_gains[ranking])
-    # print("Number of elements in ranking: ", ranking.shape)
-
-    X_sub_train = np.take(X_train, ranking, axis=1)
-
-    n, d = X_sub_train.shape
-    # print("Features in X subset:", d)
-
-    # print("Desired number of features: ", num_feat)
-
-    X_sub_test = np.take(X_test, ranking, axis=1)
-
-    return X_sub_train, y_train, X_sub_test, y_test
 
 
 
