@@ -35,7 +35,7 @@ class DataSetGenerator(object):
             self.echoFeatureSets = echoFeatureSets
             self.cache = LRUCache(DEF_CACHE_CAP)
 
-    def __getSubTracksAndFeatures(self, tracks, subclass, goal, libFeatures, echoFeatures, allGenres=False):
+    def getSubTracksAndFeatures(self, tracks, subclass, goal, libFeatures, echoFeatures, allGenres=False):
         """
         Given a starting list of tracks and features, creates subset of tracks and features that follow a 
         dataset constraint as well as the genre and feature constraints of the generator
@@ -113,7 +113,6 @@ class DataSetGenerator(object):
         """
         Create ndarrays from the subsets of features and tracks datasets that we want to look at.
         """
-        #TODO: replace l=2 with l=None
 
         # update genres if necessary
         if (genre1 is not None) and (genre2 is not None):
@@ -125,12 +124,15 @@ class DataSetGenerator(object):
         libFeatures = self.libFeatures.loc[indices] # and librosa features
         echoFeatures = self.echoFeatures.loc[indices] # and echonest features datasets    
 
-        genreTracks, genreFeatures = self.__getSubTracksAndFeatures(tracks, 'subset', self.subset, libFeatures, echoFeatures, allGenres=allGenres) # get desired tracks and features
+        genreTracks, genreFeatures = self.getSubTracksAndFeatures(tracks, 'subset', self.subset, libFeatures, echoFeatures, allGenres=allGenres) # get desired tracks and features
         print(genreTracks.shape)
         print(genreTracks['track','genre_top'].unique())
 
         if usePCA:
-            X = skl.decomposition.PCA(n_components=l).fit_transform(genreFeatures)
+            if l is None:
+                _, X = utils.preserveVarPCA(genreFeatures)
+            else:
+                X = skl.decomposition.PCA(n_components=l).fit_transform(genreFeatures)
             y = genreTracks['track', 'genre_top']
             y = skl.preprocessing.LabelEncoder().fit_transform(y)
         else:
@@ -141,7 +143,6 @@ class DataSetGenerator(object):
 
 
     def create_X_y_split(self, genre1="Experimental", genre2="Pop", usePCA=False, l=2):
-        # TODO: replace l=2 with=NONE
         """
         Creates ndarrays from the subsets of features and tracks datasets we want to look at, separating into training, validation, and testing sets
     
@@ -161,7 +162,7 @@ class DataSetGenerator(object):
         splitXy = {}
 
         for split in ['training', 'validation', 'test']:
-            splitXy[split] = tuple(self.__getSubTracksAndFeatures(tracks, 'split', split, libFeatures, echoFeatures)) # get training items of small set
+            splitXy[split] = tuple(self.getSubTracksAndFeatures(tracks, 'split', split, libFeatures, echoFeatures)) # get training items of small set
             
             # splitXy.append(subFeatures.as_matrix()) # append next X
             # splitXy.append(self.__output_classes_from_string_labels(subTracks['track', 'genre_top'])) # append next y
@@ -173,14 +174,19 @@ class DataSetGenerator(object):
         test_sub_tracks = splitXy['test'][0]
 
         if usePCA:
-            PCA = skl.decomposition.PCA(n_components=l)
-            # fits to training data and transforms
-            X_train = PCA.fit_transform(sub_features)
-            y_train = sub_tracks['track', 'genre_top']
-            y_train = skl.preprocessing.LabelEncoder().fit_transform(y_train)
+            if l is None:
+                PCA, X_train = utils.preseveVarPCA(sub_features)
+            else:
+                PCA = skl.decomposition.PCA(n_components=l)
+                # fits to training data and transforms
+                X_train = PCA.fit_transform(sub_features)
 
             # use values from training data to create X
             X_test = PCA.transform(test_sub_features)
+
+            y_train = sub_tracks['track', 'genre_top']
+            y_train = skl.preprocessing.LabelEncoder().fit_transform(y_train)
+            
             y_test = test_sub_tracks['track', 'genre_top']
             y_test = skl.preprocessing.LabelEncoder().fit_transform(y_test)
         else:
@@ -197,7 +203,7 @@ class DataSetGenerator(object):
             self.genre1 = genre1
             self.genre2 = genre2
 
-        genreTracks, genreFeatures = self.__getSubTracksAndFeatures(self.tracks, 'subset', self.subset, self.libFeatures, self.echoFeatures)
+        genreTracks, genreFeatures = self.getSubTracksAndFeatures(self.tracks, 'subset', self.subset, self.libFeatures, self.echoFeatures)
 
         X = skl.decomposition.PCA(n_components=2).fit_transform(genreFeatures)
         y = genreTracks['track', 'genre_top']
