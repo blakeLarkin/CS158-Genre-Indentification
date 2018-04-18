@@ -109,7 +109,7 @@ class DataSetGenerator(object):
             return outTracks, outFeatures
 
 
-    def create_X_y(self, genre1="Experimental", genre2="Pop", usePCA=False, l=Nonw, allGenres=False):
+    def create_X_y(self, genre1="Experimental", genre2="Pop", usePCA=False, l=None, allGenres=False):
         """
         Create ndarrays from the subsets of features and tracks datasets that we want to look at.
         """

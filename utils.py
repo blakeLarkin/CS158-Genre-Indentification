@@ -376,6 +376,10 @@ def calcMedoids(X, y):
         medoidsy.append(yCat)
     return medoidsX, medoidsy
 
+def medoidDistMatrix(medoids):
+    dists = [[np.linalg.norm(medoid1-medoid2) for medoid2 in medoids] for medoid1 in medoids]
+    return dists
+
 def preserveVarPCA(X, lDef = 10, lMin = 2, lMax = 1000):
     for l in range(lMin, lMax):
         PCA = skl.decomposition.PCA(n_components=l)
