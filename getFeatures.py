@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 from fixtures import DEF_LIB_SETS, DEF_ECHO_SETS, DEF_CACHE_CAP
 import sklearn as skl
-import sklearn.decomposition, sklearn.preprocessing
+import sklearn.decomposition, sklearn.preprocessing, sklearn.feature_selection
 import utils
 
 class DataSetGenerator(object):
@@ -35,7 +35,7 @@ class DataSetGenerator(object):
             self.echoFeatureSets = echoFeatureSets
             self.cache = LRUCache(DEF_CACHE_CAP)
 
-    def __getSubTracksAndFeatures(self, tracks, subclass, goal, libFeatures, echoFeatures):
+    def __getSubTracksAndFeatures(self, tracks, subclass, goal, libFeatures, echoFeatures, allGenres=False):
         """
         Given a starting list of tracks and features, creates subset of tracks and features that follow a 
         dataset constraint as well as the genre and feature constraints of the generator
@@ -62,17 +62,40 @@ class DataSetGenerator(object):
         # Check for features and tracks in cache
         query_key = cache_hash([subclass, goal, self.genre1, self.genre2])
         query_result = self.cache.get(query_key)
+        if not allGenres:
+            if query_result != -1:
+                # Successful cache query
+                return query_result
+            else:
+                outTracks = subTracks.loc[indices & (genre1 | genre2)] # get small tracks of wanted genres
 
-        if query_result != -1:
-            # Successful cache query
-            return query_result
-        else:
-            outTracks = subTracks.loc[indices & (genre1 | genre2)] # get small tracks of wanted genres
+                if self.libFeatureSets is not None: # get desired librosa features of small tracks of wanted genres
+                    libFeatures = subLibFeatures.loc[indices & (genre1 | genre2), self.libFeatureSets]
+                else: # use all features
+                    libFeatures = subLibFeatures.loc[indices & (genre1 | genre2)]
+
+                # currently there are issues with echoFeatures, please avoid use
+                echoFeatures = subEchoFeatures.loc[indices & (genre1 | genre2), ['echonest']]
+                if self.echoFeatureSets is not None: # get desired echonest features of small tracks of wanted genres
+                    echoFeatures = echoFeatures.loc[indices & (genre1 | genre2), self.echoFeatureSets]
+
+                outFeatures = pd.concat([libFeatures, echoFeatures]) if len(self.echoFeatureSets) != 0 else libFeatures
+
+                # Add new outTracks and Features to cache
+                self.cache.set(query_key, [outTracks, outFeatures])
+                return outTracks, outFeatures
+        else: #I don't get the cache so I'm avoiding it here
+            outTracks = subTracks.loc[indices] # get small tracks of wanted genres
 
             if self.libFeatureSets is not None: # get desired librosa features of small tracks of wanted genres
-                libFeatures = subLibFeatures.loc[indices & (genre1 | genre2), self.libFeatureSets]
+                libFeatures = subLibFeatures.loc[indices, self.libFeatureSets]
             else: # use all features
-                libFeatures = subLibFeatures.loc[indices & (genre1 | genre2)]
+                libFeatures = subLibFeatures.loc[indices]
+
+            # currently there are issues with echoFeatures, please avoid use
+            echoFeatures = subEchoFeatures.loc[indices, ['echonest']]
+            if self.echoFeatureSets is not None: # get desired echonest features of small tracks of wanted genres
+                echoFeatures = echoFeatures.loc[indices, self.echoFeatureSets]
 
             # currently there are issues with echoFeatures, please avoid use
             echoFeatures = subEchoFeatures.loc[indices & (genre1 | genre2), ['echonest']]
@@ -86,10 +109,12 @@ class DataSetGenerator(object):
             return outTracks, outFeatures
 
 
-    def create_X_y(self, genre1="Experimental", genre2="Pop"):
+    def create_X_y(self, genre1="Experimental", genre2="Pop", usePCA=False, l=2, allGenres=False):
         """
         Create ndarrays from the subsets of features and tracks datasets that we want to look at.
         """
+        #TODO: replace l=2 with l=None
+
         # update genres if necessary
         if (genre1 is not None) and (genre2 is not None):
             self.genre1 = genre1
@@ -100,16 +125,23 @@ class DataSetGenerator(object):
         libFeatures = self.libFeatures.loc[indices] # and librosa features
         echoFeatures = self.echoFeatures.loc[indices] # and echonest features datasets    
 
-        genreTracks, genreFeatures = self.__getSubTracksAndFeatures(tracks, 'subset', self.subset, libFeatures, echoFeatures) # get desired tracks and features
+        genreTracks, genreFeatures = self.__getSubTracksAndFeatures(tracks, 'subset', self.subset, libFeatures, echoFeatures, allGenres=allGenres) # get desired tracks and features
         print(genreTracks.shape)
         print(genreTracks['track','genre_top'].unique())
 
-        X = genreFeatures.as_matrix() # convert features to input matrix
-        y = self.__output_classes_from_string_labels(genreTracks['track', 'genre_top']) # create 1v1 output categorization
+        if usePCA:
+            X = skl.decomposition.PCA(n_components=l).fit_transform(genreFeatures)
+            y = genreTracks['track', 'genre_top']
+            y = skl.preprocessing.LabelEncoder().fit_transform(y)
+        else:
+            X = genreFeatures.as_matrix() # convert features to input matrix
+            y = self.__output_classes_from_string_labels(genreTracks['track', 'genre_top']) # create 1v1 output categorization
+
         return X,y
 
 
-    def create_X_y_split(self, genre1="Experimental", genre2="Pop"):
+    def create_X_y_split(self, genre1="Experimental", genre2="Pop", usePCA=False, l=2):
+        # TODO: replace l=2 with=NONE
         """
         Creates ndarrays from the subsets of features and tracks datasets we want to look at, separating into training, validation, and testing sets
     
@@ -140,11 +172,23 @@ class DataSetGenerator(object):
         test_sub_features = splitXy['test'][1]
         test_sub_tracks = splitXy['test'][0]
 
-        X_train = sub_features.as_matrix()
-        y_train = self.__output_classes_from_string_labels(sub_tracks['track', 'genre_top'])
+        if usePCA:
+            PCA = skl.decomposition.PCA(n_components=l)
+            # fits to training data and transforms
+            X_train = PCA.fit_transform(sub_features)
+            y_train = sub_tracks['track', 'genre_top']
+            y_train = skl.preprocessing.LabelEncoder().fit_transform(y_train)
 
-        X_test = test_sub_features.as_matrix()
-        y_test = self.__output_classes_from_string_labels(test_sub_tracks['track', 'genre_top'])
+            # use values from training data to create X
+            X_test = PCA.transform(test_sub_features)
+            y_test = test_sub_tracks['track', 'genre_top']
+            y_test = skl.preprocessing.LabelEncoder().fit_transform(y_test)
+        else:
+            X_train = sub_features.as_matrix() # convert features to input matrix
+            y_train = self.__output_classes_from_string_labels(sub_tracks['track', 'genre_top']) # create 1v1 output categorization
+
+            X_test = test_sub_features.as_matrix() # convert features to input matrix
+            y_test = self.__output_classes_from_string_labels(test_sub_tracks['track', 'genre_top']) # create 1v1 output categorization
 
         return X_train, y_train, X_test, y_test
 
@@ -181,6 +225,32 @@ class DataSetGenerator(object):
             classes[i] = self.labels_to_classes[label]
         return classes
 
+    def create_info_gain_subset(self, X_train, y_train, X_test, y_test, num_feat) :
+        """
+        Take in a training and test set and returns versions of those sets
+        that only include the num_feat most information-gaining features.
+        :param X_train: The full matrix of training examples
+        :param y_train: The labels for those training examples
+        :param X_test: The full matrix of text examples
+        :param y_test: The labels for the test examples
+        :param num_feat: The number of features in the outputted training and test sets 
+        :return Training and test sets and their labels, now with num_feat features
+        """
+        _, d = X_train.shape
+
+        if not num_feat <= d:
+            print("A subset of features was not created due to input num_feat param.\n Full feature set used.")
+            return X_train, y_train, X_test, y_test
+
+        info_gains = skl.feature_selection.mutual_info_classif(X_train, y_train)
+
+        ranking = np.argsort(info_gains)[-num_feat::]
+
+        X_sub_train = np.take(X_train, ranking, axis=1)
+        X_sub_test = np.take(X_test, ranking, axis=1)
+
+        return X_sub_train, y_train, X_sub_test, y_test
+
 
 ####################################
 ###                              ###
@@ -215,4 +285,10 @@ class LRUCache(object):
 
 def cache_hash(list_of_words):
     return "-".join(list_of_words)
+
+
+
+
+
+
 

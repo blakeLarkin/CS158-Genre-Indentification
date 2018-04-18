@@ -352,3 +352,25 @@ def build_sample_loader(audio_dir, Y, loader):
                 return self.X[:batch_size], self.Y[:batch_size]
 
     return SampleLoader
+
+def calcMedoids(X, y):
+    catX = {}
+    for exIdx in range(len(X)):
+        # sort X examples by y's
+        catX.setdefault(y[exIdx],[]).append(X[exIdx])
+    medoidsX = []
+    medoidsy = []
+    for yCat, Xlist in catX.items():
+        bestMedoid = Xlist[0]
+        minDist = float('inf')
+        for Xy in Xlist:
+            netDist = 0
+            for Xi in Xlist:
+                netDist += np.linalg.norm(Xy-Xi)
+            if netDist <= minDist:
+                minDist = netDist
+                bestMedoid = Xy
+        medoidsX.append(bestMedoid)
+        medoidsy.append(yCat)
+    return medoidsX, medoidsy
+    

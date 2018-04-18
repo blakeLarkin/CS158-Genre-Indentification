@@ -5,6 +5,7 @@ from crossValidation import performance_CI
 from sklearn.dummy import DummyClassifier
 from getFeatures import DataSetGenerator 
 from fixtures import TOP_GENRES
+from utils import calcMedoids
 
 def add_dsg(dsg):
     def decorator(function):
@@ -196,5 +197,22 @@ def genrePCA(dsg, genres = TOP_GENRES):
       plt.title('PCA Comparison of %s vs. %s' % (genres[i], genres[j]))
       plt.show()
 
+def allGenrePCA(dsg):
+    # get 2 component version of examples
+    X, y = dsg.create_X_y(usePCA=True, l=2, allGenres=True)
+
+    # find mediods
+    medoidsX, medoidsy = calcMedoids(X, y)
+    # break up dimensions to plot
+    medoidPCA1 = [medoid[0] for medoid in medoidsX]
+    medoidPCA2 = [medoid[1] for medoid in medoidsX]
+
+    plt.scatter(X[:,0], X[:,1], c=y, cmap='Set1', alpha=0.1)
+    plt.scatter(medoidPCA1, medoidPCA2, marker='P', c=medoidsy, cmap='Set1', alpha=1, edgecolors='k')
+    plt.title('PCA Comparison of All Eight Genres')
+
+    # TODO: figure out legend
+
+    plt.show()
 # data_dir = ../fma_metadata
     
