@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-from crossValidation import gen_depth_vs_accuracy, gen_depth_vs_accuracy_2
+from crossValidation import gen_depth_vs_accuracy
 from crossValidation import performance_CI
 from sklearn.dummy import DummyClassifier
 from getFeatures import DataSetGenerator 
@@ -103,8 +103,8 @@ def plot_CI_performance(metrics, classifiers, *args):
     plt.show()
 
 
-def generate_confidence_interval_graph(dsg,classifiers_str, classifiers):
-    X_train, y_train, X_test, y_test = dsg.create_X_y_split()
+def generate_confidence_interval_graph(dsg,classifiers_str, classifiers, genre1, genre2):
+    X_train, y_train, X_test, y_test = dsg.create_X_y_split(genre1, genre2)
 
     results = {}
     metric_list = ["accuracy", "f1_score", "auroc", "precision", "sensitivity", "specificity"]
@@ -125,11 +125,11 @@ def generate_confidence_interval_graph(dsg,classifiers_str, classifiers):
         dummy_results.append(performance_CI(dummy, X_test, y_test, metric=metric))
 
         # Calculate performance of other classifiers
-        for index, classifier in enumerate(classifiers_str):
+        for index, classifier_name in enumerate(classifiers_str):
             result = performance_CI(classifiers[index], X_test, y_test, metric=metric)
-            if classifiers_str[index] not in results:
-                results[classifiers_str[index]] = []
-            results[classifiers_str[index]].append(result)
+            if classifier_name not in results:
+                results[classifier_name] = []
+            results[classifier_name].append(result)
 
     # plot other results
     plot_CI_performance(metric_list, classifiers_str, dummy_results, *[results[classifier] for classifier in classifiers_str])
@@ -146,7 +146,6 @@ def gen_depth_vs_acc_plot(dsg, genre_prs, min_depth=2, max_depth=5, step=1):
     #dsg = DataSetGenerator('small', libFeatureSets=feature_sets, data_dir=data_dir)
 
     for pair in genre_prs:
-        X_train, y_train, X_test, y_test = dsg.create_X_y_split(pair[0], pair[1])
         train_score, test_score = gen_depth_vs_accuracy(list(dsg.create_X_y_split(pair[0], pair[1])), max_depth_min=min_depth, max_depth_max=max_depth, step=step)
         train_scores.append(train_score)
         test_scores.append(test_score)
@@ -161,8 +160,27 @@ def gen_depth_vs_acc_plot(dsg, genre_prs, min_depth=2, max_depth=5, step=1):
     title="Binary Genre Classification: Decision Trees"
     create_multi_line_graph(min_depth, max_depth, step, train_scores+test_scores, title=title, x_label=x_label, y_label = y_label, legend=train_legend+test_legend, ylim=(0,1))
 
-def metric_vs_hyperparameter_plot(title, x_label, y_label):
-    pass
+def metric_vs_hyperparameter_plot(title, x_label, y_label, genre_prs, dsg, score_args, score_kwargs):
+    train_scores = []
+    test_scores = []
+
+    train_legend = []
+    test_legend = []
+
+    sorted_x = sorted(score_args[2])
+    x_min = sorted_x[0]
+    x_max = sorted_x[-1]
+
+    for pair in genre_prs:
+        train_score, test_score = metric_vs_hyperparameters(dsg.create_X_y_split(pair[0], pair[1]), *score_args, **score_kwargs)
+        train_scores.append(train_score)
+        test_scores.append(test_score)
+
+        pair_string = pair[0] + " and " +  pair[1]
+        train_legend.append(pair_string + ": Training" )
+        test_legend.append(pair_string + ": Test")
+
+    create_multi_line_graph(x_min, x_max, 1, x_label, y_label, train_scores+test_scores, )
 
 def genrePCA(dsg, genres = TOP_GENRES):
   '''
