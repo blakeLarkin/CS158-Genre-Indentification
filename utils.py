@@ -376,17 +376,24 @@ def calcMedoids(X, y):
         medoidsy.append(yCat)
     return medoidsX, medoidsy
 
-def preserveVarPCA(X, lDef = 10, lMin = 2, lMax = 1000):
-    initVar = np.var(X.as_matrix())
-    print(initVar)
+def preserveVarPCA(X, lDef = 10, lMin = 2, lMax = 50):
+    
 
     for l in range(lMin, lMax):
+        done = 0
         PCA = skl.decomposition.PCA(n_components=l)
         comps = PCA.fit_transform(X)
-        compVar = np.var(comps)
-        print(compVar)
-        if float(compVar) / initVar >= 0.95:
-            return PCA, comps
+        compvars = np.cumsum(PCA.explained_variance_ratio_)
+        for index,var in enumerate(compvars):
+            if var >= 0.95:
+                done = index
+                break 
+        if done:
+            print('l={}, k={}'.format(l, done))
+            break
+
+
+
     PCA = skl.decomposition.PCA(n_components=lDef)
     comps = PCA.fit_transform(X)
     return PCA, comps
