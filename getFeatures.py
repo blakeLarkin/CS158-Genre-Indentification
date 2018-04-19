@@ -109,7 +109,7 @@ class DataSetGenerator(object):
             return outTracks, outFeatures
 
 
-    def create_X_y(self, genre1="Experimental", genre2="Pop", usePCA=False, l=2, allGenres=False):
+    def create_X_y(self, genre1="Experimental", genre2="Pop", usePCA=False, l=None, allGenres=False):
         """
         Create ndarrays from the subsets of features and tracks datasets that we want to look at.
         """
@@ -130,7 +130,9 @@ class DataSetGenerator(object):
 
         if usePCA:
             if l is None:
-                _, X = utils.preserveVarPCA(genreFeatures)
+                PCA, X = utils.preserveVarPCA(genreFeatures)
+                l = PCA.n_components_
+                print(l)
             else:
                 X = skl.decomposition.PCA(n_components=l).fit_transform(genreFeatures)
             y = genreTracks['track', 'genre_top']
@@ -142,7 +144,7 @@ class DataSetGenerator(object):
         return X,y
 
 
-    def create_X_y_split(self, genre1="Experimental", genre2="Pop", usePCA=False, l=2):
+    def create_X_y_split(self, genre1="Experimental", genre2="Pop", usePCA=False, l=None):
         """
         Creates ndarrays from the subsets of features and tracks datasets we want to look at, separating into training, validation, and testing sets
     
@@ -176,6 +178,7 @@ class DataSetGenerator(object):
         if usePCA:
             if l is None:
                 PCA, X_train = utils.preseveVarPCA(sub_features)
+                l = PCA.n_components_
             else:
                 PCA = skl.decomposition.PCA(n_components=l)
                 # fits to training data and transforms
