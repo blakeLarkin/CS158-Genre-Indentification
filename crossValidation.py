@@ -1,7 +1,4 @@
-import numpy as np
-import pandas as pd
-import utils
-import getFeatures as gf
+
 # Gabriel Womark & Flora Gallina Jones
 # Assignment 6
 
@@ -11,6 +8,7 @@ Class       : HMC CS 158
 Date        : 2018 Feb 14
 Description : Twitter
 """
+from pprint import pprint
 
 from string import punctuation
 
@@ -20,12 +18,17 @@ import numpy as np
 # matplotlib libraries
 import matplotlib.pyplot as plt
 
+import pandas as pd
+import utils
+import getFeatures as gf
+
 # scikit-learn libraries
 from sklearn.dummy import DummyClassifier
 from sklearn.svm import SVC
-from sklearn.model_selection import StratifiedKFold, cross_val_score
+from sklearn.model_selection import StratifiedKFold, cross_val_score, RandomizedSearchCV, GridSearchCV
 from sklearn import metrics
 from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import Perceptron
 from sklearn.utils import shuffle
 from scipy.stats import norm
@@ -238,4 +241,60 @@ def metric_vs_hyperparameters(data, metric, clf_class, varied_hyp, other_params=
             scores[subset].append(np.average(score))
 
     return scores['train'], scores['test']
+
+def random_forest_hyperparameter_selection(data, iterations):
+    X_train, y_train, X_test, y_test = data
+    n,d = X_train.shape
+    print(d)
+
+    # Set up hyperparameter grid for randomized search
+    n_estimators = np.arange(2, 101, 10)
+    max_features = np.arange(1, d+1, 5)
+    max_depth = np.arange(2, 101, 10)
+
+    random_param_grid = {
+        'n_estimators': n_estimators,
+        'max_features': max_features,
+        'max_depth': max_depth
+    }
+
+    ##scoring = ['f1', 'accuracy', 'precision', 'recall', 'roc_auc']
+
+    # peform randomized cv hyperparameter search
+    # n_iterations is the number of random samples tested from the grid
+    rs = RandomizedSearchCV(RandomForestClassifier(criterion='entropy'), 
+                        random_param_grid, n_iter=iterations, scoring='accuracy', cv=9, random_state=10, n_jobs=-1)
+
+    # print("Fitting data ...")
+    # rs.fit(X_train, y_train)
+    # print("Done fitting...\n")
+    # print("Best params:")
+    # pprint(rs.best_params_)
+
+    #
+    # The best parameters were n_estimators: 72, max_features: 51, max_depth: 42
+    # so I made ranges around those numbers for this next parameter grid
+    param_grid = {
+        'n_estimators': np.arange(50, 91, 10),
+        'max_features': np.arange(50, d+1, 10),
+        'max_depth':np.arange(30, 61, 10)
+    }
+
+    # perform cv for every combination of hyperparameters
+    gs = GridSearchCV(RandomForestClassifier(criterion='entropy'), 
+                    param_grid, scoring='accuracy', cv=9, n_jobs=-1)
+
+    print("Fitting data ...")
+    gs.fit(X_train,y_train)
+    print("Done fitting...\n")
+    print("Best params:")
+
+    # these should give us the best params
+    pprint(gs.best_params_)
+
+
+
+
+
+
 

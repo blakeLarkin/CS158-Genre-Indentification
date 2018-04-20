@@ -161,6 +161,11 @@ def gen_depth_vs_acc_plot(dsg, genre_prs, min_depth=2, max_depth=5, step=1):
     title="Binary Genre Classification: Decision Trees"
     create_multi_line_graph(min_depth, max_depth, step, train_scores+test_scores, title=title, x_label=x_label, y_label = y_label, legend=train_legend+test_legend, ylim=(0,1))
 
+
+def random_forest_tests():
+
+
+
 def metric_vs_hyperparameter_plot(title, x_label, y_label, genre_prs, dsg, score_args, score_kwargs):
     train_scores = []
     test_scores = []
@@ -183,6 +188,7 @@ def metric_vs_hyperparameter_plot(title, x_label, y_label, genre_prs, dsg, score
 
     create_multi_line_graph(x_min, x_max, 1, x_label, y_label, train_scores+test_scores, )
 
+
 def genrePCA(dsg, genres = TOP_GENRES):
   '''
   pass in a string list of genre names to see all combinations, default is all genres
@@ -196,6 +202,7 @@ def genrePCA(dsg, genres = TOP_GENRES):
       plt.scatter(X[:,0], X[:,1], c=y, cmap='RdBu', alpha=0.5)
       plt.title('PCA Comparison of %s vs. %s' % (genres[i], genres[j]))
       plt.show()
+
 
 def allGenrePCA(dsg):
     # get 2 component version of examples
