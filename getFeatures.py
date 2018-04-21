@@ -132,7 +132,7 @@ class DataSetGenerator(object):
             if l is None:
                 PCA, X = utils.preserveVarPCA(genreFeatures)
                 l = PCA.n_components_
-                print(l)
+                print("The number of PCA components that preserves 95% variance is: ", l)
             else:
                 X = skl.decomposition.PCA(n_components=l).fit_transform(genreFeatures)
             y = genreTracks['track', 'genre_top']
@@ -177,8 +177,9 @@ class DataSetGenerator(object):
 
         if usePCA:
             if l is None:
-                PCA, X_train = utils.preseveVarPCA(sub_features)
+                PCA, X_train = utils.preserveVarPCA(sub_features)
                 l = PCA.n_components_
+                print("The number of PCA components that preserves 95% variance is: ", l)
             else:
                 PCA = skl.decomposition.PCA(n_components=l)
                 # fits to training data and transforms
