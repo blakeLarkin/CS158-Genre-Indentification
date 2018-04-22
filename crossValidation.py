@@ -306,7 +306,8 @@ def random_forest_hyperparameter_selection(data, iterations):
     print("Best accuracy score:")
     pprint(gs.best_score_)
 
-    return gs
+
+    return gs.best_params_, gs.best_score_
 
 
 

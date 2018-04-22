@@ -34,6 +34,8 @@ class DataSetGenerator(object):
             # currently there are issues with echo features, please avoid use
             self.echoFeatureSets = echoFeatureSets
             self.cache = LRUCache(DEF_CACHE_CAP)
+            self.num_PCA_components = None
+            self.num_ig_features = None
 
     def getSubTracksAndFeatures(self, tracks, subclass, goal, libFeatures, echoFeatures, allGenres=False):
         """
@@ -179,11 +181,14 @@ class DataSetGenerator(object):
             if l is None:
                 PCA, X_train = utils.preserveVarPCA(sub_features)
                 l = PCA.n_components_
-                print("The number of PCA components that preserves 95% variance is: ", l)
+                with open('results.txt', 'a') as result_file:
+                    result_file.write("Num components PCA preserving 95% variance: {}\n".format(l))
             else:
                 PCA = skl.decomposition.PCA(n_components=l)
                 # fits to training data and transforms
                 X_train = PCA.fit_transform(sub_features)
+            self.num_PCA_components = l
+            self.num_ig_features = l
 
             # use values from training data to create X
             X_test = PCA.transform(test_sub_features)
@@ -199,6 +204,7 @@ class DataSetGenerator(object):
 
             X_test = test_sub_features.as_matrix() # convert features to input matrix
             y_test = self.__output_classes_from_string_labels(test_sub_tracks['track', 'genre_top']) # create 1v1 output categorization
+            self.num_PCA_components = None
 
         return X_train, y_train, X_test, y_test
 
@@ -235,7 +241,7 @@ class DataSetGenerator(object):
             classes[i] = self.labels_to_classes[label]
         return classes
 
-    def create_info_gain_subset(self, X_train, y_train, X_test, y_test, num_feat) :
+    def create_info_gain_subset(self, X_train, y_train, X_test, y_test, num_feat=None) :
         """
         Take in a training and test set and returns versions of those sets
         that only include the num_feat most information-gaining features.
@@ -248,7 +254,15 @@ class DataSetGenerator(object):
         """
         _, d = X_train.shape
 
-        if not num_feat <= d:
+        # Use number of features from PCA
+        if num_feat is None:
+
+            # Calculate number of PCA components if we haven't done it yet 
+            if self.num_ig_features is None:
+                self.create_X_y_split(self.genre1, self.genre2, usePCA=True)
+            num_feat = self.num_ig_features
+
+        if num_feat > d:
             print("A subset of features was not created due to input num_feat param.\n Full feature set used.")
             return X_train, y_train, X_test, y_test
 
