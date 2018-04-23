@@ -27,7 +27,7 @@ hyparams = {
 	'mfcc_info': {'max_depth':52, 'max_features':1, 'n_estimators': 62},
 	'hp_raw': {'max_depth': 12, 'max_features': 121, 'n_estimators': 62},
 	'hp_pca': {'max_depth': 6, 'max_features': 1, 'n_estimators': 72},
-	'hp_info': {'max_depth': 6, 'max_features': 1, 'n_estimators': 12}, 
+	'hp_info': {'max_depth': 6, 'max_features': 1, 'n_estimators': 12},
 }
 
 genre1 = "Folk"
@@ -53,7 +53,7 @@ def full_feature_PCA_data_forest(iters, dsg):
 
 	# split into training and test sets
 	data = dsg.create_X_y_split(genre1=genre1, genre2=genre2, usePCA=True)
-	
+
 
 	# do random forest hyperparameter selection -> print best-performing results
 	best_params, score = random_forest_hyperparameter_selection(data, iters)
@@ -93,7 +93,7 @@ def mfcc_feature_raw_data_forest(iters, dsg):
 def mfcc_feature_PCA_data_forest(iters, dsg):
 	# split into training and test sets
 	data = dsg.create_X_y_split(genre1=genre1, genre2=genre2, usePCA=True)
-	
+
 
 	# do random forest hyperparameter selection -> print best-performing results
 	best_params, score = random_forest_hyperparameter_selection(data, iters)
@@ -124,7 +124,7 @@ def mfcc_feature_tests(dsg, iters):
 def chroma_feature_raw_data_forest(iters):
 	# Load full data set (librosa features)
 	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2, libFeatureSets=['chroma_cens', 'chroma_cqt', 'chroma_stft'])
-	
+
 	# split into training and test sets
 	data = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
 
@@ -167,7 +167,7 @@ def hand_picked_info_data_forest(dsg, iters):
 def hand_picked_tests(dsg, iters):
 	# Load data set (librosa features)
 	dsg.set_lib_feature_sets(features['hp_raw'])
-	
+
 	hand_picked_raw_data_forest(dsg, iters)
 	hand_picked_PCA_data_forest(dsg, iters)
 	hand_picked_info_data_forest(dsg, iters)
@@ -185,15 +185,15 @@ def results_to_file(exp_name, best_params, score, iters,features=0):
 		result_file.write("Accuracy: {}%\n\n".format(score))
 
 
-def hyperparameter_optimization_test():
+def hyperparameter_optimization_test(dsg):
 	iters = 100
-	with open("results.txt", "w") as result_file:
+	with open("new_results.txt", "w") as result_file:
 		result_file.write("")
 
 	start = time.time()
 	#full_feature_tests(iters)
-	#mfcc_feature_tests(iters)
-	hand_picked_tests(100)
+	mfcc_feature_tests(dsg, iters)
+	#hand_picked_tests(100)
 
 	end = time.time()
 
@@ -246,16 +246,15 @@ def ttest_feature_sets(dsg, model1, model2):
 
 def main():
 	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2)
-	full_feature_tests(dsg, 100)
-	hand_picked_tests(dsg, 100)
-	
+	hyperparameter_optimization_test(dsg)
 
-	
+
+
 
 if __name__ == '__main__':
 	main()
 
-	
+
 
 
 ## try spectral centroid; spectral contrast w/ mfcc and chroma cqt
