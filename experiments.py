@@ -247,11 +247,6 @@ def ttest_feature_sets(dsg, model1, model2):
 
 
 
-
-
-
-
-
 def main():
 	dsg = DataSetGenerator('small')
 	#print(ttest_feature_sets(dsg, 'mfcc_raw', 'hp_raw'))

@@ -5,7 +5,7 @@ from crossValidation import performance_CI
 from sklearn.dummy import DummyClassifier
 from getFeatures import DataSetGenerator 
 from fixtures import TOP_GENRES
-from utils import calcMedoids
+from utils import calcMedoids, medoidDistMatrix
 
 
 
@@ -196,8 +196,14 @@ def allGenrePCA(dsg):
     # get 2 component version of examples
     X, y = dsg.create_X_y(usePCA=True, l=2, allGenres=True)
 
+    genresYMeaning = ['Electronic', 'Experimental', 'Folk', 'Hip-Hop', 'Instrumental', 'International', 'Pop', 'Rock']
+    genresOrder = ['Hip-Hop', 'Pop', 'Folk', 'Experimental', 'Rock', 'International', 'Electronic', 'Instrumental']
+
     # find mediods
     medoidsX, medoidsy = calcMedoids(X, y)
+
+    print(genresOrder)
+    print(medoidDistMatrix(medoidsX))
     # break up dimensions to plot
     medoidPCA1 = [medoid[0] for medoid in medoidsX]
     medoidPCA2 = [medoid[1] for medoid in medoidsX]

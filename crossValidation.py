@@ -292,10 +292,3 @@ def random_forest_hyperparameter_selection(data, iterations):
 
     return gs.best_params_, gs.best_score_
 
-
-
-
-
-
-
-
