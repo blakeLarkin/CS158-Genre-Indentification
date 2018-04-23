@@ -196,14 +196,14 @@ def gen_depth_vs_accuracy(data, max_depth_min=2, max_depth_max=2, step=2):
     # 2. max_depth, varies
     
     depths = np.arange(max_depth_min,max_depth_max+1,step, dtype=np.int16)
-    metric = metrics.accuracy_score
+    ##metric = metrics.accuracy_score
 
     varied_hyp = {'name': 'max_depth', 'hyparams': depths}
     other_params = {'criterion': 'entropy'}
     clf_class = DecisionTreeClassifier
 
 
-    return metric_vs_hyperparameters(data, metric, clf_class, varied_hyp, other_params)
+    return metric_vs_hyperparameters(data, "accuracy", clf_class, varied_hyp, other_params)
 
 def metric_vs_hyperparameters(data, metric, clf_class, varied_hyp, other_params={}):
     """
@@ -235,9 +235,15 @@ def metric_vs_hyperparameters(data, metric, clf_class, varied_hyp, other_params=
         clf_args = {varied_hyp['name']: param, **other_params}
         clf = clf_class(**clf_args)
 
+        # train on the training set, test on the test set
+        clf.fit(X_train, y_train)
+
         for subset in ['train', 'test']:
-            score = cross_val_score(clf, data['X_'+subset], data['y_'+subset], cv=kf, scoring=metrics.make_scorer(metric))
-            scores[subset].append(np.average(score))
+            predictions =  clf.predict(data["X_"+subset])
+            score = performance(data['y_'+subset], predictions, metric=metric)
+            scores[subset].append(score)
+
+        ##print(scores['train'], scores['test'])
 
     return scores['train'], scores['test']
 

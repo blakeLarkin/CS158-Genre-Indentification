@@ -1,9 +1,12 @@
 from getFeatures import DataSetGenerator
-import graphing
+from graphing import plot_CI_performance
 from crossValidation import random_forest_hyperparameter_selection
+from crossValidation import performance_CI
 import utils
 import time
 import sys
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 
 def full_feature_raw_data_forest(iters, dsg):
@@ -151,21 +154,93 @@ def results_to_file(exp_name, best_params, score, iters,features=0):
 		result_file.write("Accuracy: {}%\n\n".format(score))
 
 
-iters = 100
-with open("results.txt", "w") as result_file:
-	result_file.write("")
+# iters = 100
+# with open("results.txt", "w") as result_file:
+# 	result_file.write("")
 
 
 
-start = time.time()
-full_feature_tests(iters)
-mfcc_feature_tests(iters)
-hand_picked_raw_data_forest(iters)
-hand_picked_mfcc_PCA_data_forest(iters)
+# start = time.time()
+# full_feature_tests(iters)
+# mfcc_feature_tests(iters)
+# hand_picked_raw_data_forest(iters)
+# hand_picked_mfcc_PCA_data_forest(iters)
 
-end = time.time()
+# end = time.time()
 
-print("Time elasped: {}".format(end - start))
+# print("Time elasped: {}".format(end - start))
 
-## try spectral centroid; spectral contrast w/ mfcc and chroma cqt
-## TRY ZERO CROSSING RATE ; way of identifying percussive sounds
+
+def gen_feature_subset_twitter_plot(genre1, genre2):
+
+	training_results = []
+	test_results = []
+	baseline_results = []
+
+	
+	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2, libFeatureSets=None)
+
+	# ## Get baseline results
+	# X_train, y_train, X_test, y_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
+	# baseline = DecisionTreeClassifier(criterion='entropy', max_depth=3)
+	# baseline.fit(X_train, y_train)
+	# baseline_results += [performance_CI(baseline, X_test, y_test)]
+	# baseline_results += [performance_CI(baseline, X_test, y_test)]
+
+
+	## Get MFCC results
+	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2, libFeatureSets=['mfcc'])
+	X_train, y_train, X_test, y_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
+	mfcc_forest = RandomForestClassifier(criterion='entropy', max_depth=52, max_features=96, n_estimators=82)
+	mfcc_forest.fit(X_train, y_train)
+
+	mfcc_train_result = mfcc_forest.score(X_train, y_train)
+	mfcc_train_results = (mfcc_train_result, mfcc_train_result, mfcc_train_result)
+
+	training_results += [mfcc_train_results]
+
+	test_results += [performance_CI(mfcc_forest, X_test, y_test)]
+
+	baseline = DecisionTreeClassifier(criterion='entropy', max_depth=3)
+	baseline.fit(X_train, y_train)
+	baseline_results += [performance_CI(baseline, X_test, y_test)]
+
+	## get hand-picked results
+	hand_picked = ['mfcc', 'zcr', 'spectral_contrast', 'spectral_bandwith', 'spectral_centroid']
+	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2, libFeatureSets=hand_picked)
+	X_train, y_train, X_test, y_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
+	_, d = X_train.shape
+	print("Number of hand picked features is: ", d)
+
+	hand_forest = RandomForestClassifier(criterion='entropy', max_depth=12, max_features=121, n_estimators=62)
+	hand_forest.fit(X_train, y_train)
+
+	hand_train_result = hand_forest.score(X_train, y_train)
+	hand_train_results = (hand_train_result, hand_train_result, hand_train_result)
+	training_results += [hand_train_results]
+
+	test_results += [performance_CI(hand_forest, X_test, y_test)]
+
+	baseline = DecisionTreeClassifier(criterion='entropy', max_depth=3)
+	baseline.fit(X_train, y_train)
+	baseline_results += [performance_CI(baseline, X_test, y_test)]
+
+	clusters=["MFCC Features", "Hand-Picked Features"]
+	bars=["Training", "Test"]
+	# bars = ["Test"]
+
+	plot_CI_performance(clusters, bars, baseline_results, training_results, test_results)
+	# plot_CI_performance(clusters, bars, baseline_results, test_results)
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -151,6 +151,9 @@ def gen_depth_vs_acc_plot(dsg, genre_prs, min_depth=2, max_depth=5, step=1):
         train_scores.append(train_score)
         test_scores.append(test_score)
 
+        print("Training scores: ", train_scores)
+        print("Testing scores: ", test_scores)
+
         pair_string = pair[0] + " and " +  pair[1]
         train_legend.append(pair_string + ": Training" )
         test_legend.append(pair_string + ": Test")
@@ -222,4 +225,9 @@ def allGenrePCA(dsg):
 
     plt.show()
 # data_dir = ../fma_metadata
-    
+
+def decisiontree_plot():
+
+    dsg = DataSetGenerator('small',libFeatureSets=None)
+
+    gen_depth_vs_acc_plot(dsg, [("Rock", "Instrumental"), ("Experimental", "Folk")], max_depth=25, step=1)
