@@ -27,7 +27,7 @@ class DataSetGenerator(object):
             self.subset = subset
             self.tracks = utils.load(data_dir+'tracks.csv')
             self.libFeatures = utils.load(data_dir+'features.csv')
-            #self.echoFeatures = utils.load(data_dir+'echonest.csv')
+            self.echoFeatures = utils.load(data_dir+'echonest.csv')
             self.genre1 = genre1
             self.genre2 = genre2
             self.libFeatureSets = libFeatureSets
@@ -274,6 +274,9 @@ class DataSetGenerator(object):
         X_sub_test = np.take(X_test, ranking, axis=1)
 
         return X_sub_train, y_train, X_sub_test, y_test
+
+    def set_lib_feature_sets(self, libFeatureSets):
+        self.libFeatureSets = libFeatureSets
 
 
 ####################################
