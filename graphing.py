@@ -7,13 +7,6 @@ from getFeatures import DataSetGenerator
 from fixtures import TOP_GENRES
 from utils import calcMedoids, medoidDistMatrix
 
-def add_dsg(dsg):
-    def decorator(function):
-        def wrapper(*args, **kwargs):
-            function(*args, **kwargs)
-
-        return wrapper
-    return decorator
 
 
 def create_multi_line_graph(x_min, x_max, step, ys, title="", x_label="", y_label="", legend=None, **kwargs):
@@ -40,14 +33,14 @@ def create_multi_line_graph(x_min, x_max, step, ys, title="", x_label="", y_labe
     plt.ylabel(y_label)
     plt.show()
 
-def plot_CI_performance(metrics, classifiers, *args):
+def plot_CI_performance(cluster_labels, legend_labels, *args):
     """
     Make a results plot.
 
     Parameters
     --------------------
-        metrics      -- list of strings, metrics
-        classifiers  -- list of strings, classifiers
+        metrics      -- labels of clusters
+        classifiers  -- labels of elements in legend
         args         -- variable length argument
                           results for baseline
                           results for classifier 1
@@ -122,6 +115,7 @@ def generate_confidence_interval_graph(dsg,classifiers_str, classifiers, genre1,
     dummy_results = []
 
     for metric in metric_list:
+
         # Calculate dummy performance
         dummy_results.append(performance_CI(dummy, X_test, y_test, metric=metric))
 
@@ -144,8 +138,6 @@ def gen_depth_vs_acc_plot(dsg, genre_prs, min_depth=2, max_depth=5, step=1):
     train_legend = []
     test_legend = []
 
-    #dsg = DataSetGenerator('small', libFeatureSets=feature_sets, data_dir=data_dir)
-
     for pair in genre_prs:
         train_score, test_score = gen_depth_vs_accuracy(list(dsg.create_X_y_split(pair[0], pair[1])), max_depth_min=min_depth, max_depth_max=max_depth, step=step)
         train_scores.append(train_score)
@@ -160,9 +152,6 @@ def gen_depth_vs_acc_plot(dsg, genre_prs, min_depth=2, max_depth=5, step=1):
     y_label = "Accuracy"
     title="Binary Genre Classification: Decision Trees"
     create_multi_line_graph(min_depth, max_depth, step, train_scores+test_scores, title=title, x_label=x_label, y_label = y_label, legend=train_legend+test_legend, ylim=(0,1))
-
-
-##def random_forest_tests():
 
 
 def metric_vs_hyperparameter_plot(title, x_label, y_label, genre_prs, dsg, score_args, score_kwargs):
