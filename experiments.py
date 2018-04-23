@@ -1,8 +1,12 @@
 from getFeatures import DataSetGenerator
+from graphing import plot_CI_performance
 from crossValidation import random_forest_hyperparameter_selection, ttest
+from crossValidation import performance_CI
 import utils
 import time
 import sys
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
 
 from sklearn.ensemble import RandomForestClassifier
 
@@ -27,7 +31,7 @@ hyparams = {
 	'mfcc_info': {'max_depth':52, 'max_features':1, 'n_estimators': 62},
 	'hp_raw': {'max_depth': 12, 'max_features': 121, 'n_estimators': 62},
 	'hp_pca': {'max_depth': 6, 'max_features': 1, 'n_estimators': 72},
-	'hp_info': {'max_depth': 6, 'max_features': 1, 'n_estimators': 12}, 
+	'hp_info': {'max_depth': 6, 'max_features': 1, 'n_estimators': 12},
 }
 
 genre1 = "Folk"
@@ -53,7 +57,7 @@ def full_feature_PCA_data_forest(iters, dsg):
 
 	# split into training and test sets
 	data = dsg.create_X_y_split(genre1=genre1, genre2=genre2, usePCA=True)
-	
+
 
 	# do random forest hyperparameter selection -> print best-performing results
 	best_params, score = random_forest_hyperparameter_selection(data, iters)
@@ -78,14 +82,11 @@ def full_feature_tests(dsg, iters):
 	dsg.set_lib_feature_sets(features['ff_raw'])
 
 	full_feature_PCA_data_forest(iters, dsg)
-	#full_feature_best_info_gain_forest(iters, dsg)
+	full_feature_best_info_gain_forest(iters, dsg)
 
 
 
 def mfcc_feature_raw_data_forest(iters, dsg):
-	## Explore various results on just MFCC features
-	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2, libFeatureSets=['mfcc'])
-
 	# split into training and test sets
 	data = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
 
@@ -94,20 +95,15 @@ def mfcc_feature_raw_data_forest(iters, dsg):
 	results_to_file("MFCC Raw", best_params, score, iters)
 
 def mfcc_feature_PCA_data_forest(iters, dsg):
-
-	# Load full data set (librosa features)
-	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2, libFeatureSets=['mfcc'])
-
 	# split into training and test sets
 	data = dsg.create_X_y_split(genre1=genre1, genre2=genre2, usePCA=True)
-	
+
 
 	# do random forest hyperparameter selection -> print best-performing results
 	best_params, score = random_forest_hyperparameter_selection(data, iters)
 	results_to_file("MFCC PCA", best_params, score, iters)
 
 def mfcc_feature_best_info_gain_forest(iters, dsg):
-
 	# split into training and test sets
 	X_train, y_train, X_test, y_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
 
@@ -132,7 +128,7 @@ def mfcc_feature_tests(dsg, iters):
 def chroma_feature_raw_data_forest(iters):
 	# Load full data set (librosa features)
 	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2, libFeatureSets=['chroma_cens', 'chroma_cqt', 'chroma_stft'])
-	
+
 	# split into training and test sets
 	data = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
 
@@ -174,11 +170,11 @@ def hand_picked_info_data_forest(dsg, iters):
 
 def hand_picked_tests(dsg, iters):
 	# Load data set (librosa features)
-	dsg.set_lib_feature_sets(data['hp_raw'])
-	
-	#hand_picked_raw_data_forest(dsg, iters)
+	dsg.set_lib_feature_sets(features['hp_raw'])
+
+	hand_picked_raw_data_forest(dsg, iters)
 	hand_picked_PCA_data_forest(dsg, iters)
-	#hand_picked_info_data_forest(dsg, iters)
+	hand_picked_info_data_forest(dsg, iters)
 
 
 
@@ -192,16 +188,95 @@ def results_to_file(exp_name, best_params, score, iters,features=0):
 		result_file.write("Hyperparameters: {}\n".format(str(best_params)))
 		result_file.write("Accuracy: {}%\n\n".format(score))
 
+# iters = 100
+# with open("results.txt", "w") as result_file:
+# 	result_file.write("")
 
-def hyperparameter_optimization_test():
+
+
+# start = time.time()
+# full_feature_tests(iters)
+# mfcc_feature_tests(iters)
+# hand_picked_raw_data_forest(iters)
+# hand_picked_mfcc_PCA_data_forest(iters)
+
+# end = time.time()
+
+# print("Time elasped: {}".format(end - start))
+
+
+def gen_feature_subset_twitter_plot(genre1, genre2):
+
+	training_results = []
+	test_results = []
+	baseline_results = []
+
+
+	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2, libFeatureSets=None)
+
+	# ## Get baseline results
+	# X_train, y_train, X_test, y_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
+	# baseline = DecisionTreeClassifier(criterion='entropy', max_depth=3)
+	# baseline.fit(X_train, y_train)
+	# baseline_results += [performance_CI(baseline, X_test, y_test)]
+	# baseline_results += [performance_CI(baseline, X_test, y_test)]
+
+
+	## Get MFCC results
+	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2, libFeatureSets=['mfcc'])
+	X_train, y_train, X_test, y_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
+	mfcc_forest = RandomForestClassifier(criterion='entropy', max_depth=52, max_features=96, n_estimators=82)
+	mfcc_forest.fit(X_train, y_train)
+
+	mfcc_train_result = mfcc_forest.score(X_train, y_train)
+	mfcc_train_results = (mfcc_train_result, mfcc_train_result, mfcc_train_result)
+
+	training_results += [mfcc_train_results]
+
+	test_results += [performance_CI(mfcc_forest, X_test, y_test)]
+
+	baseline = DecisionTreeClassifier(criterion='entropy', max_depth=3)
+	baseline.fit(X_train, y_train)
+	baseline_results += [performance_CI(baseline, X_test, y_test)]
+
+	## get hand-picked results
+	hand_picked = ['mfcc', 'zcr', 'spectral_contrast', 'spectral_bandwith', 'spectral_centroid']
+	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2, libFeatureSets=hand_picked)
+	X_train, y_train, X_test, y_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
+	_, d = X_train.shape
+	print("Number of hand picked features is: ", d)
+
+	hand_forest = RandomForestClassifier(criterion='entropy', max_depth=12, max_features=121, n_estimators=62)
+	hand_forest.fit(X_train, y_train)
+
+	hand_train_result = hand_forest.score(X_train, y_train)
+	hand_train_results = (hand_train_result, hand_train_result, hand_train_result)
+	training_results += [hand_train_results]
+
+	test_results += [performance_CI(hand_forest, X_test, y_test)]
+
+	baseline = DecisionTreeClassifier(criterion='entropy', max_depth=3)
+	baseline.fit(X_train, y_train)
+	baseline_results += [performance_CI(baseline, X_test, y_test)]
+
+	clusters=["MFCC Features", "Hand-Picked Features"]
+	bars=["Training", "Test"]
+	# bars = ["Test"]
+
+	plot_CI_performance(clusters, bars, baseline_results, training_results, test_results)
+	# plot_CI_performance(clusters, bars, baseline_results, test_results)
+
+
+def hyperparameter_optimization_test(dsg):
 	iters = 100
-	with open("results.txt", "w") as result_file:
+	with open("new_results.txt", "w") as result_file:
 		result_file.write("")
 
 	start = time.time()
+
 	#full_feature_tests(iters)
-	#mfcc_feature_tests(iters)
-	hand_picked_tests(100)
+	mfcc_feature_tests(dsg, iters)
+	#hand_picked_tests(100)
 
 	end = time.time()
 
@@ -233,6 +308,7 @@ def ttest_feature_sets(dsg, model1, model2):
 	dsg.set_lib_feature_sets(features[model1])
 	X1_train, y1_train, X1_test, y1_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
 
+
 	dsg.set_lib_feature_sets(features[model2])
 	X2_train, y2_train, X2_test, y2_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
 
@@ -254,17 +330,10 @@ def ttest_feature_sets(dsg, model1, model2):
 
 def main():
 	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2)
-	full_feature_tests(dsg, 100)
-	hand_picked_tests(dsg, 100)
-	
+	hyperparameter_optimization_test(dsg)
 
-	
 
 if __name__ == '__main__':
 	main()
 
-	
 
-
-## try spectral centroid; spectral contrast w/ mfcc and chroma cqt
-## TRY ZERO CROSSING RATE ; way of identifying percussive sounds

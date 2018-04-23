@@ -30,7 +30,7 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.linear_model import Perceptron
 from sklearn.utils import shuffle
-from scipy.stats import norm, ttest_ind_from_stats
+from scipy.stats import norm
 
 def performance(y_true, y_pred, metric="accuracy") :
     """
@@ -133,7 +133,6 @@ def cv_performance(clf, X, y, kf, metric="accuracy") :
             scores.append(score)
     return np.array(scores).mean()
 
-
 def performance_CI(clf, X, y, metric="accuracy") :
     """
     Estimates the performance of the classifier using the 95% CI.
@@ -190,55 +189,72 @@ def performance_CI(clf, X, y, metric="accuracy") :
     ### ========== TODO : END ========== ###
 
 
-def bootstrap_mean_std(clf, X, y, metric='accuracy'):
-    """
-    Clf already trained
-    """
-    n, d = X.shape
+def gen_depth_vs_accuracy(data, max_depth_min=2, max_depth_max=2, step=2):
 
-    scores = np.zeros(1000)
-
-    for t in range(1000):
-        sample_X = np.zeros((n, d))
-        sample_y = np.zeros(n)
-
-        # Sample with replacement
-        for i in range(n):
-            index = np.random.randint(n)
-            sample_X[i] = X[index]
-            sample_y[i] = y[index]
-
-        try:
-            sample_y_pred = clf.decision_function(sample_X)
-        except:
-            sample_y_pred = clf.predict(sample_X)
-
-        scores[t] = performance(sample_y, sample_y_pred, metric)
-
-    mean = np.mean(scores)
-    std = np.std(scores)
-    return mean, std 
-
-def ttest(clf1, X_1, y_1, clf2, X_2, y_2, alpha=0.5):
-    mean1, std1 = bootstrap_mean_std(clf1, X_1, y_1)
-    mean2, std2 = bootstrap_mean_std(clf2, X_2, y_2)
-
-    _, pvalue = ttest_ind_from_stats(mean1, std1, 1000, mean2, std2, 100)
-    reject = pvalue <= alpha 
-
-    return {'mean1': mean1, 'std1': std1, 'mean2': mean2, 'std2': std2, 'pvalue':pvalue, 'reject':reject}
+    # Dtree parameters:
+    # 1. criterion = "entropy"
+    # 2. max_depth, varies
     
+    depths = np.arange(max_depth_min,max_depth_max+1,step, dtype=np.int16)
+    ##metric = metrics.accuracy_score
+
+    varied_hyp = {'name': 'max_depth', 'hyparams': depths}
+    other_params = {'criterion': 'entropy'}
+    clf_class = DecisionTreeClassifier
 
 
+    return metric_vs_hyperparameters(data, "accuracy", clf_class, varied_hyp, other_params)
+
+def metric_vs_hyperparameters(data, metric, clf_class, varied_hyp, other_params={}):
+    """
+    Calculate test and training accuracies using 9-fold cv while varying a single hyperparameter
+
+    :param [nd.array] data: List of the form [X_train, y_train, X_test, y_test]
+    :param metric: A numpy.metrics metric
+    :param Class clf_class: The class of the classifier to test
+    :param dict varied_hyp: Dictionary with keys 'name' and 'hyparams'. 'name' stores the name of the hyperparamter to vary as a string, 
+                            'hyparams' stores the list of varying hyperparamter values
+    :param dict other_params: A dictionary storing arguments to be passed to the classifier class upon construction
+    """
+
+    # grab data and format to calculate scores using for loop
+    X_train, y_train, X_test, y_test = data
+    data={'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test':y_test}
+
+    n_trials = len(varied_hyp['hyparams'])
+   
+    # Store scores in this dictionary
+    scores = {'train':[], 'test':[]}
+
+    # Set up cv
+    kf = StratifiedKFold(n_splits=9, shuffle=True, random_state=10)
+
+    #Calculate scores here
+    for param in varied_hyp['hyparams']:
+        # Set up classifier with varied parameter and other paramters
+        clf_args = {varied_hyp['name']: param, **other_params}
+        clf = clf_class(**clf_args)
+
+        # train on the training set, test on the test set
+        clf.fit(X_train, y_train)
+
+        for subset in ['train', 'test']:
+            predictions =  clf.predict(data["X_"+subset])
+            score = performance(data['y_'+subset], predictions, metric=metric)
+            scores[subset].append(score)
+
+        ##print(scores['train'], scores['test'])
+
+    return scores['train'], scores['test']
 
 def random_forest_hyperparameter_selection(data, iterations):
     X_train, y_train, X_test, y_test = data
     n,d = X_train.shape
+    print(d)
 
     # Set up hyperparameter grid for randomized search
     n_estimators = np.arange(2, 101, 10)
-    max_features = np.arange(1, d+1, (5 if d > 3 else max(1, (d+1)/float(6))))
-    print(max_features)
+    max_features = np.arange(1, d+1, 5)
     max_depth = np.arange(2, 101, 10)
 
     random_param_grid = {
@@ -273,7 +289,14 @@ def random_forest_hyperparameter_selection(data, iterations):
             up_bound = min(up_bound, d)
 
         param_grid[key] = np.arange(low_bound, up_bound+1, max(1, int((up_bound - low_bound)/6) ) )
-    
+    #
+    # The best parameters were n_estimators: 72, max_features: 51, max_depth: 42
+    # so I made ranges around those numbers for this next parameter grid
+    # param_grid = {
+    #     'n_estimators': np.arange(50, 91, 10),
+    #     'max_features': np.arange(50, d+1, 10),
+    #     'max_depth':np.arange(30, 61, 10)
+    # }
 
     # perform cv for every combination of hyperparameters
     gs = GridSearchCV(RandomForestClassifier(criterion='entropy'), 

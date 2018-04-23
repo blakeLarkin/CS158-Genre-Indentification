@@ -1,6 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
-#from crossValidation import gen_depth_vs_accuracy
+from crossValidation import gen_depth_vs_accuracy
 from crossValidation import performance_CI
 from crossValidation import featureImportances
 from sklearn.dummy import DummyClassifier
@@ -141,9 +141,12 @@ def gen_depth_vs_acc_plot(dsg, genre_prs, min_depth=2, max_depth=5, step=1):
     test_legend = []
 
     for pair in genre_prs:
-        #train_score, test_score = gen_depth_vs_accuracy(list(dsg.create_X_y_split(pair[0], pair[1])), max_depth_min=min_depth, max_depth_max=max_depth, step=step)
+        train_score, test_score = gen_depth_vs_accuracy(list(dsg.create_X_y_split(pair[0], pair[1])), max_depth_min=min_depth, max_depth_max=max_depth, step=step)
         train_scores.append(train_score)
         test_scores.append(test_score)
+
+        print("Training scores: ", train_scores)
+        print("Testing scores: ", test_scores)
 
         pair_string = pair[0] + " and " +  pair[1]
         train_legend.append(pair_string + ": Training" )
@@ -246,3 +249,9 @@ def featureImportanceChart(dsg, rfc, numFeatures, infoGain=False):
     plt.yticks(y_pos, leastImpCats)
     plt.title('Most Important Features')
     plt.show()
+
+def decisiontree_plot():
+
+    dsg = DataSetGenerator('small',libFeatureSets=None)
+
+    gen_depth_vs_acc_plot(dsg, [("Rock", "Instrumental"), ("Experimental", "Folk")], max_depth=25, step=1)
