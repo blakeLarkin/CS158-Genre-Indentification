@@ -78,14 +78,11 @@ def full_feature_tests(dsg, iters):
 	dsg.set_lib_feature_sets(features['ff_raw'])
 
 	full_feature_PCA_data_forest(iters, dsg)
-	#full_feature_best_info_gain_forest(iters, dsg)
+	full_feature_best_info_gain_forest(iters, dsg)
 
 
 
 def mfcc_feature_raw_data_forest(iters, dsg):
-	## Explore various results on just MFCC features
-	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2, libFeatureSets=['mfcc'])
-
 	# split into training and test sets
 	data = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
 
@@ -94,10 +91,6 @@ def mfcc_feature_raw_data_forest(iters, dsg):
 	results_to_file("MFCC Raw", best_params, score, iters)
 
 def mfcc_feature_PCA_data_forest(iters, dsg):
-
-	# Load full data set (librosa features)
-	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2, libFeatureSets=['mfcc'])
-
 	# split into training and test sets
 	data = dsg.create_X_y_split(genre1=genre1, genre2=genre2, usePCA=True)
 	
@@ -107,7 +100,6 @@ def mfcc_feature_PCA_data_forest(iters, dsg):
 	results_to_file("MFCC PCA", best_params, score, iters)
 
 def mfcc_feature_best_info_gain_forest(iters, dsg):
-
 	# split into training and test sets
 	X_train, y_train, X_test, y_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
 
@@ -174,11 +166,11 @@ def hand_picked_info_data_forest(dsg, iters):
 
 def hand_picked_tests(dsg, iters):
 	# Load data set (librosa features)
-	dsg.set_lib_feature_sets(data['hp_raw'])
+	dsg.set_lib_feature_sets(features['hp_raw'])
 	
-	#hand_picked_raw_data_forest(dsg, iters)
+	hand_picked_raw_data_forest(dsg, iters)
 	hand_picked_PCA_data_forest(dsg, iters)
-	#hand_picked_info_data_forest(dsg, iters)
+	hand_picked_info_data_forest(dsg, iters)
 
 
 
