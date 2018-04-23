@@ -162,10 +162,6 @@ def gen_depth_vs_acc_plot(dsg, genre_prs, min_depth=2, max_depth=5, step=1):
     create_multi_line_graph(min_depth, max_depth, step, train_scores+test_scores, title=title, x_label=x_label, y_label = y_label, legend=train_legend+test_legend, ylim=(0,1))
 
 
-def random_forest_tests():
-
-
-
 def metric_vs_hyperparameter_plot(title, x_label, y_label, genre_prs, dsg, score_args, score_kwargs):
     train_scores = []
     test_scores = []

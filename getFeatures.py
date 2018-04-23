@@ -27,7 +27,7 @@ class DataSetGenerator(object):
             self.subset = subset
             self.tracks = utils.load(data_dir+'tracks.csv')
             self.libFeatures = utils.load(data_dir+'features.csv')
-            self.echoFeatures = utils.load(data_dir+'echonest.csv')
+            #self.echoFeatures = utils.load(data_dir+'echonest.csv')
             self.genre1 = genre1
             self.genre2 = genre2
             self.libFeatureSets = libFeatureSets

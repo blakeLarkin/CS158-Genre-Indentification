@@ -275,9 +275,9 @@ def random_forest_hyperparameter_selection(data, iterations):
     # The best parameters were n_estimators: 72, max_features: 51, max_depth: 42
     # so I made ranges around those numbers for this next parameter grid
     param_grid = {
-        'n_estimators': np.arange(50, 91, 10),
-        'max_features': np.arange(50, d+1, 10),
-        'max_depth':np.arange(30, 61, 10)
+        'n_estimators': np.arange(50, 91, 15),
+        'max_features': np.arange(50, d+1, 15),
+        'max_depth':np.arange(30, 61, 15)
     }
 
     # perform cv for every combination of hyperparameters
@@ -291,6 +291,8 @@ def random_forest_hyperparameter_selection(data, iterations):
 
     # these should give us the best params
     pprint(gs.best_params_)
+
+def rf_hyperparameters
 
 
 
