@@ -40,6 +40,7 @@ class DataSetGenerator(object):
             self.cache = LRUCache(DEF_CACHE_CAP)
             self.num_PCA_components = None
             self.num_ig_features = None
+            self.ranking = None
 
     def getSubTracksAndFeatures(self, tracks, subclass, goal, libFeatures, echoFeatures, allGenres=False):
         """
@@ -280,6 +281,7 @@ class DataSetGenerator(object):
         info_gains = mutual_info_classif(X_train, y_train)
 
         ranking = np.argsort(info_gains)[-num_feat::]
+        self.ranking = ranking
 
         X_sub_train = np.take(X_train, ranking, axis=1)
         X_sub_test = np.take(X_test, ranking, axis=1)
