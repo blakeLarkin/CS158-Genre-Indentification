@@ -291,10 +291,3 @@ def random_forest_hyperparameter_selection(data, iterations):
 
     # these should give us the best params
     pprint(gs.best_params_)
-
-
-
-
-
-
-

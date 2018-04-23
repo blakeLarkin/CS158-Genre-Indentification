@@ -5,7 +5,7 @@ from crossValidation import performance_CI
 from sklearn.dummy import DummyClassifier
 from getFeatures import DataSetGenerator 
 from fixtures import TOP_GENRES
-from utils import calcMedoids
+from utils import calcMedoids, medoidDistMatrix
 
 def add_dsg(dsg):
     def decorator(function):
@@ -163,7 +163,7 @@ def gen_depth_vs_acc_plot(dsg, genre_prs, min_depth=2, max_depth=5, step=1):
 
 
 def random_forest_tests():
-
+    pass
 
 
 def metric_vs_hyperparameter_plot(title, x_label, y_label, genre_prs, dsg, score_args, score_kwargs):
@@ -208,8 +208,14 @@ def allGenrePCA(dsg):
     # get 2 component version of examples
     X, y = dsg.create_X_y(usePCA=True, l=2, allGenres=True)
 
+    genresYMeaning = ['Electronic', 'Experimental', 'Folk', 'Hip-Hop', 'Instrumental', 'International', 'Pop', 'Rock']
+    genresOrder = ['Hip-Hop', 'Pop', 'Folk', 'Experimental', 'Rock', 'International', 'Electronic', 'Instrumental']
+
     # find mediods
     medoidsX, medoidsy = calcMedoids(X, y)
+
+    print(genresOrder)
+    print(medoidDistMatrix(medoidsX))
     # break up dimensions to plot
     medoidPCA1 = [medoid[0] for medoid in medoidsX]
     medoidPCA2 = [medoid[1] for medoid in medoidsX]
