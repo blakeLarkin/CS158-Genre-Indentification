@@ -292,7 +292,7 @@ def random_forest_hyperparameter_selection(data, iterations):
 
     return gs.best_params_, gs.best_score_
 
-def featureImportances(dsg, rfc, numFeatures, infoGain=False):
+def featureImportances(dsg, rfc, numFeatures, infoGain=False, mostImp=True):
     """ takes in a DataSetGenerator and a trained random-forest classifier trained on that dsg"""
     indices = dsg.tracks.index[dsg.tracks['set', 'subset'] == dsg.subset] # grab the track_ids of all songs in the 'self.subset' subset.
     tracks = dsg.tracks.loc[indices]     # These are subsets of the original tracks
@@ -303,7 +303,10 @@ def featureImportances(dsg, rfc, numFeatures, infoGain=False):
 
     featureHeads = list(genreFeatures.columns.values)
 
-    featureImps = np.argsort(rfc.feature_importances_)[-numFeatures:][::-1]
+    if mostImp:
+        featureImps = np.argsort(rfc.feature_importances_)[-numFeatures:][::-1]
+    else:
+        featureImps = np.argsort(rfc.feature_importances_)[:numFeatures]
 
     output = []
     if not infoGain:
