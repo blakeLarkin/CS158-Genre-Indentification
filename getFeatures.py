@@ -2,8 +2,12 @@ import collections
 import numpy as np
 import pandas as pd
 from fixtures import DEF_LIB_SETS, DEF_ECHO_SETS, DEF_CACHE_CAP
-import sklearn as skl
-import sklearn.decomposition, sklearn.preprocessing, sklearn.feature_selection
+
+
+from sklearn.decomposition import PCA
+from sklearn.feature_selection import mutual_info_classif
+from sklearn.preprocessing import LabelEncoder, StandardScaler
+
 import utils
 
 class DataSetGenerator(object):
@@ -131,14 +135,17 @@ class DataSetGenerator(object):
         print(genreTracks['track','genre_top'].unique())
 
         if usePCA:
+            z_scaler = StandardScaler()
+            z_genreFeautres = z_scaler.fit_transform(genreFeatures)
+
             if l is None:
-                PCA, X = utils.preserveVarPCA(genreFeatures)
+                PCA, X = utils.preserveVarPCA(z_genreFeautres)
                 l = PCA.n_components_
                 print("The number of PCA components that preserves 95% variance is: ", l)
             else:
-                X = skl.decomposition.PCA(n_components=l).fit_transform(genreFeatures)
+                X = PCA(n_components=l).fit_transform(z_genreFeautres)
             y = genreTracks['track', 'genre_top']
-            y = skl.preprocessing.LabelEncoder().fit_transform(y)
+            y = LabelEncoder().fit_transform(y)
         else:
             X = genreFeatures.as_matrix() # convert features to input matrix
             y = self.__output_classes_from_string_labels(genreTracks['track', 'genre_top']) # create 1v1 output categorization
@@ -178,26 +185,30 @@ class DataSetGenerator(object):
         test_sub_tracks = splitXy['test'][0]
 
         if usePCA:
+            z_scaler = StandardScaler()
+            z_sub_feautres = z_scaler.fit_transform(sub_features)
+            z_test_sub_features = z_scaler.fit_transform(test_sub_features)
+
             if l is None:
-                PCA, X_train = utils.preserveVarPCA(sub_features)
+                PCA, X_train = utils.preserveVarPCA(z_sub_feautres)
                 l = PCA.n_components_
-                with open('results.txt', 'a') as result_file:
+                with open('new_results.txt', 'a') as result_file:
                     result_file.write("Num components PCA preserving 95% variance: {}\n".format(l))
             else:
-                PCA = skl.decomposition.PCA(n_components=l)
+                PCA = PCA(n_components=l)
                 # fits to training data and transforms
-                X_train = PCA.fit_transform(sub_features)
+                X_train = PCA.fit_transform(z_sub_features)
             self.num_PCA_components = l
             self.num_ig_features = l
 
             # use values from training data to create X
-            X_test = PCA.transform(test_sub_features)
+            X_test = PCA.transform(z_test_sub_features)
 
             y_train = sub_tracks['track', 'genre_top']
-            y_train = skl.preprocessing.LabelEncoder().fit_transform(y_train)
+            y_train = LabelEncoder().fit_transform(y_train)
             
             y_test = test_sub_tracks['track', 'genre_top']
-            y_test = skl.preprocessing.LabelEncoder().fit_transform(y_test)
+            y_test = LabelEncoder().fit_transform(y_test)
         else:
             X_train = sub_features.as_matrix() # convert features to input matrix
             y_train = self.__output_classes_from_string_labels(sub_tracks['track', 'genre_top']) # create 1v1 output categorization
@@ -215,9 +226,9 @@ class DataSetGenerator(object):
 
         genreTracks, genreFeatures = self.getSubTracksAndFeatures(self.tracks, 'subset', self.subset, self.libFeatures, self.echoFeatures)
 
-        X = skl.decomposition.PCA(n_components=2).fit_transform(genreFeatures)
+        X = PCA(n_components=2).fit_transform(genreFeatures)
         y = genreTracks['track', 'genre_top']
-        y = skl.preprocessing.LabelEncoder().fit_transform(y)
+        y = LabelEncoder().fit_transform(y)
 
         return X, y
 
@@ -266,7 +277,7 @@ class DataSetGenerator(object):
             print("A subset of features was not created due to input num_feat param.\n Full feature set used.")
             return X_train, y_train, X_test, y_test
 
-        info_gains = skl.feature_selection.mutual_info_classif(X_train, y_train)
+        info_gains = mutual_info_classif(X_train, y_train)
 
         ranking = np.argsort(info_gains)[-num_feat::]
 
