@@ -1,6 +1,5 @@
 
-# Gabriel Womark & Flora Gallina Jones
-# Assignment 6
+# Gabriel Womark, Blake Larkin,  & Flora Gallina Jones
 
 """
 Author      : Yi-Chieh Wu
@@ -259,26 +258,39 @@ def random_forest_hyperparameter_selection(data, iterations):
     }
 
     ##scoring = ['f1', 'accuracy', 'precision', 'recall', 'roc_auc']
-
+    print("Starting random grid search...")
     # peform randomized cv hyperparameter search
     # n_iterations is the number of random samples tested from the grid
     rs = RandomizedSearchCV(RandomForestClassifier(criterion='entropy'), 
                         random_param_grid, n_iter=iterations, scoring='accuracy', cv=9, random_state=10, n_jobs=-1)
 
-    # print("Fitting data ...")
-    # rs.fit(X_train, y_train)
-    # print("Done fitting...\n")
+    print("Fitting data ...")
+    rs.fit(X_train, y_train)
+    print("Done fitting...\n")
     # print("Best params:")
     # pprint(rs.best_params_)
+    print("Starting full grid search...")
 
-    #
-    # The best parameters were n_estimators: 72, max_features: 51, max_depth: 42
-    # so I made ranges around those numbers for this next parameter grid
+    # Construct a new parameter grid centered on the best value from the random search
+    param_grid = {}
+
+    for key in rs.best_params_:
+        val = rs.best_params_[key]
+        low_bound = max(val-30, 1)
+        up_bound = val+30
+
+        if key == 'max_features':
+            up_bound = min(up_bound, d)
+
+        param_grid[key] = np.arange(low_bound, up_bound+1, max(1, int((up_bound - low_bound)/6) ) )
+    
+    
     param_grid = {
         'n_estimators': np.arange(50, 91, 15),
         'max_features': np.arange(50, d+1, 15),
         'max_depth':np.arange(30, 61, 15)
     }
+
 
     # perform cv for every combination of hyperparameters
     gs = GridSearchCV(RandomForestClassifier(criterion='entropy'), 
@@ -291,6 +303,11 @@ def random_forest_hyperparameter_selection(data, iterations):
 
     # these should give us the best params
     pprint(gs.best_params_)
+    print("Best accuracy score:")
+    pprint(gs.best_score_)
+
+
+    return gs.best_params_, gs.best_score_
 
 def rf_hyperparameters
 
