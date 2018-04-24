@@ -228,7 +228,9 @@ def featureImportanceChart(dsg, rfc, numFeatures, infoGain=False):
         infoGain: boolean for if rfc was trained on infogain features
     """
     mostImportant = featureImportances(dsg, rfc, numFeatures, infoGain = infoGain, mostImp = True)
+    print(mostImportant)
     leastImportant = featureImportances(dsg, rfc, numFeatures, infoGain = infoGain, mostImp = False)
+    print(leastImportant)
 
     mostImpCats = [imp[0] for imp in mostImportant]
     mostImpVals = [imp[1] for imp in mostImportant]
@@ -247,7 +249,8 @@ def featureImportanceChart(dsg, rfc, numFeatures, infoGain=False):
     y_pos = np.arange(len(leastImpCats))
     plt.barh(y_pos, leastImpVals, align='center', color='cyan', ecolor='black')
     plt.yticks(y_pos, leastImpCats)
-    plt.title('Most Important Features')
+    plt.gca().invert_yaxis()  # labels read top-to-bottom
+    plt.title('Least Important Features')
     plt.show()
 
 def decisiontree_plot():
