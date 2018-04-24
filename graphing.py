@@ -2,10 +2,12 @@ import numpy as np
 import matplotlib.pyplot as plt
 from crossValidation import gen_depth_vs_accuracy
 from crossValidation import performance_CI
+from crossValidation import featureImportances
 from sklearn.dummy import DummyClassifier
 from getFeatures import DataSetGenerator 
 from fixtures import TOP_GENRES
 from utils import calcMedoids, medoidDistMatrix
+from sklearn.ensemble import RandomForestClassifier
 
 
 
@@ -219,6 +221,37 @@ def allGenrePCA(dsg):
 
     plt.show()
 # data_dir = ../fma_metadata
+    
+def featureImportanceChart(dsg, rfc, numFeatures, infoGain=False):
+    """ dsg: a datasetgenerator
+        rfc: trained rfc trained on dsg
+        infoGain: boolean for if rfc was trained on infogain features
+    """
+    mostImportant = featureImportances(dsg, rfc, numFeatures, infoGain = infoGain, mostImp = True)
+    print(mostImportant)
+    leastImportant = featureImportances(dsg, rfc, numFeatures, infoGain = infoGain, mostImp = False)
+    print(leastImportant)
+
+    mostImpCats = [imp[0] for imp in mostImportant]
+    mostImpVals = [imp[1] for imp in mostImportant]
+    leastImpCats = [imp[0] for imp in leastImportant]
+    leastImpVals = [imp[1] for imp in leastImportant]
+
+    y_pos = np.arange(len(mostImpCats))
+    plt.barh(y_pos, mostImpVals, align='center', color='cyan', ecolor='black')
+    plt.yticks(y_pos, mostImpCats)
+    plt.gca().invert_yaxis()  # labels read top-to-bottom
+    plt.title('Most Important Features')
+    plt.show()
+
+    plt.clf()
+
+    y_pos = np.arange(len(leastImpCats))
+    plt.barh(y_pos, leastImpVals, align='center', color='cyan', ecolor='black')
+    plt.yticks(y_pos, leastImpCats)
+    plt.gca().invert_yaxis()  # labels read top-to-bottom
+    plt.title('Least Important Features')
+    plt.show()
 
 def decisiontree_plot():
 
