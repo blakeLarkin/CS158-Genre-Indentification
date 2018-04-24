@@ -110,7 +110,7 @@ def cv_performance(clf, X, y, kf, metric="accuracy") :
 
     Parameters
     --------------------
-        clf    -- classifier 
+        clf    -- classifier
         X      -- numpy array of shape (n,d), feature vectors
                     n = number of examples
                     d = number of features
@@ -194,7 +194,7 @@ def gen_depth_vs_accuracy(data, max_depth_min=2, max_depth_max=2, step=2):
     # Dtree parameters:
     # 1. criterion = "entropy"
     # 2. max_depth, varies
-    
+
     depths = np.arange(max_depth_min,max_depth_max+1,step, dtype=np.int16)
     ##metric = metrics.accuracy_score
 
@@ -212,7 +212,7 @@ def metric_vs_hyperparameters(data, metric, clf_class, varied_hyp, other_params=
     :param [nd.array] data: List of the form [X_train, y_train, X_test, y_test]
     :param metric: A numpy.metrics metric
     :param Class clf_class: The class of the classifier to test
-    :param dict varied_hyp: Dictionary with keys 'name' and 'hyparams'. 'name' stores the name of the hyperparamter to vary as a string, 
+    :param dict varied_hyp: Dictionary with keys 'name' and 'hyparams'. 'name' stores the name of the hyperparamter to vary as a string,
                             'hyparams' stores the list of varying hyperparamter values
     :param dict other_params: A dictionary storing arguments to be passed to the classifier class upon construction
     """
@@ -222,7 +222,7 @@ def metric_vs_hyperparameters(data, metric, clf_class, varied_hyp, other_params=
     data={'X_train': X_train, 'y_train': y_train, 'X_test': X_test, 'y_test':y_test}
 
     n_trials = len(varied_hyp['hyparams'])
-   
+
     # Store scores in this dictionary
     scores = {'train':[], 'test':[]}
 
@@ -255,7 +255,7 @@ def random_forest_hyperparameter_selection(data, iterations):
     # Set up hyperparameter grid for randomized search
     n_estimators = np.arange(2, 101, 10)
     max_features = np.arange(1, d+1, 5)
-    max_depth = np.arange(2, 101, 10)
+    max_depth = np.arange(1, 11, 1)
 
     random_param_grid = {
         'n_estimators': n_estimators,
@@ -267,7 +267,7 @@ def random_forest_hyperparameter_selection(data, iterations):
     print("Starting random grid search...")
     # peform randomized cv hyperparameter search
     # n_iterations is the number of random samples tested from the grid
-    rs = RandomizedSearchCV(RandomForestClassifier(criterion='entropy'), 
+    rs = RandomizedSearchCV(RandomForestClassifier(criterion='entropy'),
                         random_param_grid, n_iter=iterations, scoring='accuracy', cv=9, random_state=10, n_jobs=-1)
 
     print("Fitting data ...")
@@ -288,6 +288,9 @@ def random_forest_hyperparameter_selection(data, iterations):
         if key == 'max_features':
             up_bound = min(up_bound, d)
 
+        if key == 'max_depth':
+            up_bound = 11
+
         param_grid[key] = np.arange(low_bound, up_bound+1, max(1, int((up_bound - low_bound)/6) ) )
     #
     # The best parameters were n_estimators: 72, max_features: 51, max_depth: 42
@@ -299,7 +302,7 @@ def random_forest_hyperparameter_selection(data, iterations):
     # }
 
     # perform cv for every combination of hyperparameters
-    gs = GridSearchCV(RandomForestClassifier(criterion='entropy'), 
+    gs = GridSearchCV(RandomForestClassifier(criterion='entropy'),
                     param_grid, scoring='accuracy', cv=9, n_jobs=-1)
 
     print("Fitting data ...")

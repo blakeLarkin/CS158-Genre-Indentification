@@ -1,6 +1,6 @@
 from getFeatures import DataSetGenerator
 from graphing import plot_CI_performance
-from crossValidation import random_forest_hyperparameter_selection, ttest
+from crossValidation import random_forest_hyperparameter_selection
 from crossValidation import performance_CI
 import utils
 import time
@@ -40,7 +40,7 @@ genre2 = "Experimental"
 
 
 
-def full_feature_raw_data_forest(iters, dsg):
+def full_feature_raw_data_forest(dsg, iters):
 	## Explore various results on the FULL set of librosa features.
 	# split into training and test sets
 	data = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
@@ -51,7 +51,7 @@ def full_feature_raw_data_forest(iters, dsg):
 
 	# set up a random classifier w/ those parameters
 
-def full_feature_PCA_data_forest(iters, dsg):
+def full_feature_PCA_data_forest(dsg, iters):
 	## Explore various results on full set of librosa features, applying PCA
 
 
@@ -63,14 +63,14 @@ def full_feature_PCA_data_forest(iters, dsg):
 	best_params, score = random_forest_hyperparameter_selection(data, iters)
 	results_to_file("Full Feature PCA", best_params, score, iters)
 
-def full_feature_best_info_gain_forest(iters, dsg):
+def full_feature_best_info_gain_forest(dsg, iters, num_feat=None):
 	## Explore results on full feature set; subsetted by top info gaining features
 
 	# split into training and test sets
 	X_train, y_train, X_test, y_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
 
 	# create dataset that uses only most info-gaining features
-	data = dsg.create_info_gain_subset(X_train, y_train, X_test, y_test)
+	data = dsg.create_info_gain_subset(X_train, y_train, X_test, y_test, num_feat)
 
 	# do random forest hyperparameter selection
 	best_params, score = random_forest_hyperparameter_selection(data, iters)
@@ -81,12 +81,12 @@ def full_feature_tests(dsg, iters):
 	# Load full data set (librosa features)
 	dsg.set_lib_feature_sets(features['ff_raw'])
 
-	full_feature_PCA_data_forest(iters, dsg)
-	full_feature_best_info_gain_forest(iters, dsg)
+	full_feature_PCA_data_forest(dsg,iters)
+	full_feature_best_info_gain_forest(dsg,iters)
 
 
 
-def mfcc_feature_raw_data_forest(iters, dsg):
+def mfcc_feature_raw_data_forest(dsg, iters):
 	# split into training and test sets
 	data = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
 
@@ -94,7 +94,7 @@ def mfcc_feature_raw_data_forest(iters, dsg):
 	best_params, score = random_forest_hyperparameter_selection(data, iters)
 	results_to_file("MFCC Raw", best_params, score, iters)
 
-def mfcc_feature_PCA_data_forest(iters, dsg):
+def mfcc_feature_PCA_data_forest(dsg, iters):
 	# split into training and test sets
 	data = dsg.create_X_y_split(genre1=genre1, genre2=genre2, usePCA=True)
 
@@ -103,7 +103,7 @@ def mfcc_feature_PCA_data_forest(iters, dsg):
 	best_params, score = random_forest_hyperparameter_selection(data, iters)
 	results_to_file("MFCC PCA", best_params, score, iters)
 
-def mfcc_feature_best_info_gain_forest(iters, dsg):
+def mfcc_feature_best_info_gain_forest(dsg,iters):
 	# split into training and test sets
 	X_train, y_train, X_test, y_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
 
@@ -119,8 +119,8 @@ def mfcc_feature_tests(dsg, iters):
 	# Load full data set (librosa features)
 	dsg.set_lib_feature_sets(features['mfcc_raw'])
 
-	mfcc_feature_raw_data_forest(iters, dsg)
-	mfcc_feature_PCA_data_forest(iters, dsg)
+	mfcc_feature_raw_data_forest(dsg,iters)
+	mfcc_feature_PCA_data_forest(dsg,iters)
 	mfcc_feature_best_info_gain_forest(iters, dsg)
 
 
@@ -274,63 +274,23 @@ def hyperparameter_optimization_test(dsg):
 
 	start = time.time()
 
-	#full_feature_tests(iters)
+	full_feature_tests(dsg, iters)
 	mfcc_feature_tests(dsg, iters)
-	#hand_picked_tests(100)
+	hand_picked_tests(dsg, iters)
 
 	end = time.time()
 
 	print("Time elasped: {}".format(end - start))
 
-def ttest_pca_info(dsg, model):
-	dsg.set_lib_feature_sets(features[model])
-
-	X_train, y_train, X_test, y_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2, usePCA=True)
-	print(X_train.shape)
-	X_train_info, y_train_info, X_test_info, y_test_info = dsg.create_info_gain_subset(*dsg.create_X_y_split(genre1=genre1, genre2=genre2))
-
-	pca = RandomForestClassifier(criterion='entropy', **hyparams[model.split("_")[0]+'_pca'])
-	info = RandomForestClassifier(criterion='entropy', **hyparams[model.split("_")[0]+'_info'])
-
-	print("Training pca...")
-	pca.fit(X_train, y_train)
-	print("Done Training pca...")
-	print("Training info...")
-	info.fit(X_train_info, y_train_info)
-	print("Done Training info...")
-
-	print("Performing t-test...")
-	result = ttest(pca, X_test, y_test, info, X_test_info, y_test_info)
-
-	return result
-
-def ttest_feature_sets(dsg, model1, model2):
-	dsg.set_lib_feature_sets(features[model1])
-	X1_train, y1_train, X1_test, y1_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
-
-
-	dsg.set_lib_feature_sets(features[model2])
-	X2_train, y2_train, X2_test, y2_test = dsg.create_X_y_split(genre1=genre1, genre2=genre2)
-
-	clf1 = RandomForestClassifier(criterion='entropy', **hyparams[model1])
-	clf2 = RandomForestClassifier(criterion='entropy', **hyparams[model2])
-
-	print("Training "+model1 + "...")
-	clf1.fit(X1_train, y1_train)
-	print("Done Training " + model1 + "..." )
-	print("Training "+model2 +"...")
-	clf2.fit(X2_train, y2_train)
-	print("Done Training "+model2+"...")
-
-	print("Performing t-test...")
-	result = ttest(clf1, X1_test, y1_test, clf2, X2_test, y2_test)
-	return result
-
-
-
 def main():
-	dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2)
-	hyperparameter_optimization_test(dsg)
+        dsg = DataSetGenerator(subset="small", genre1=genre1, genre2=genre2)
+
+
+        #hand_picked_raw_data_forest(dsg,100)
+        #full_feature_PCA_data_forest(dsg,100)
+        #full_feature_best_info_gain_forest(dsg,100)
+        #full_feature_best_info_gain_forest(dsg, 100, 1)
+        full_feature_best_info_gain_forest(dsg, 100, 2)
 
 
 if __name__ == '__main__':
